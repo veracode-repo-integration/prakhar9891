@@ -1,0 +1,19 @@
+package com.pos.server.model;
+
+import javax.persistence.*;
+import lombok.Data;
+
+@Entity
+@Data
+@Table(name = "settings")
+public class Settings {
+    @Id
+    private String id = "default"; // Singleton
+
+    private double taxRate;
+    private String upiId;
+    private String merchantName;
+    private String gstNumber;
+    private String address;
+    private String footerMessage;
+}
