@@ -22,17 +22,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. ENABLE CORS
-                .cors().configurationSource(corsConfigurationSource())
+                // 1. ENABLE CORS explicitly
+                .cors()
                 .and()
-                // 2. DISABLE CSRF (Fixes 403 on POST/PUT)
+                // 2. DISABLE CSRF
                 .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
+                // Explicitly allow OPTIONS requests
+                .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // Public endpoints
                 .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/api/**").permitAll() // Allow all API endpoints for development
+                .antMatchers("/api/**").permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Secure all other endpoints
@@ -64,22 +66,14 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
 
-        // Use allowedOriginPatterns instead of allowedOrigins for better support
-        if (allowedOrigins.equals("*")) {
-            configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
-        } else {
-            java.util.List<String> origins = new java.util.ArrayList<>(
-                    java.util.Arrays.asList(allowedOrigins.split(",")));
-            // Ensure common patterns are allowed
-            origins.add("https://*.vercel.app");
-            origins.add("http://localhost:[*]");
-            configuration.setAllowedOriginPatterns(origins);
-        }
+        // Allow all origins via pattern to support credentials
+        configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
 
         configuration
                 .setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
-        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowedHeaders(java.util.Arrays.asList("*"));
         configuration.setAllowCredentials(true);
+        configuration.setExposedHeaders(java.util.Arrays.asList("Authorization", "Content-Type"));
 
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
