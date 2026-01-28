@@ -8,26 +8,33 @@ import java.util.Date;
 
 @Component
 public class JwtUtils {
-    private final Key key = Keys.secretKeyFor(SignatureAlgorithm.HS256); // Generated secure key
-    private final long EXPIRATION_MS = 86400000; // 1 day
+    @org.springframework.beans.factory.annotation.Value("${pos.jwt.secret:pos_system_ultra_secure_secret_key_1234567890}")
+    private String jwtSecret;
+
+    private final long EXPIRATION_MS = 86400000 * 7; // 7 days for better UX
+
+    private Key getSigningKey() {
+        byte[] keyBytes = jwtSecret.getBytes();
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
     public String generateToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
-                .signWith(key)
+                .signWith(getSigningKey())
                 .compact();
     }
 
     public String getUsernameFromToken(String token) {
-        return Jwts.parserBuilder().setSigningKey(key).build()
+        return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
                 .parseClaimsJws(token).getBody().getSubject();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
             return false;

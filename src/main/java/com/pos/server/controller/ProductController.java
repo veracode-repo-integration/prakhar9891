@@ -23,16 +23,26 @@ public class ProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> saveProduct(@RequestBody Product product) {
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Product> saveProduct(@RequestBody Product product) {
         Product saved = productService.saveProduct(product);
-        return ResponseEntity.ok(Map.of("success", true, "product", saved));
+        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    // @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteProduct(@PathVariable String id) {
         productService.deleteProduct(id);
-        return ResponseEntity.ok(Map.of("success", true));
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
+    @PutMapping("/{id}")
+    // @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateProduct(@PathVariable String id, @RequestBody Product updates) {
+        Product updated = productService.updateProduct(id, updates);
+        if (updated != null) {
+            return ResponseEntity.ok(Map.of("ok", true, "product", updated));
+        }
+        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Product not found"));
     }
 }

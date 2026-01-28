@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -30,32 +29,13 @@ public class OrderController {
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
         try {
-            Order order = new Order();
-            order.setId("ORD-" + System.currentTimeMillis()); // Simple ID generation
-            order.setItems(request.getCart());
-            order.setCreatedAt(System.currentTimeMillis());
-            order.setStatus("paid");
-
-            if (request.getPaymentInfo() != null) {
-                order.setMethod((String) request.getPaymentInfo().get("method"));
-                order.setNote((String) request.getPaymentInfo().get("note"));
-                // Serialize Objects to JSON strings for simple storage matches existing
-                // structure
-                order.setCustomerJson(mapper.writeValueAsString(request.getPaymentInfo().get("customer")));
-            }
-            if (request.getUser() != null) {
-                order.setUserJson(mapper.writeValueAsString(request.getUser()));
-            }
-
-            // Calc total
-            double total = request.getCart().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum();
-            order.setTotal(total);
-
-            Order saved = orderService.createOrder(order);
+            Order saved = orderService.processCheckout(request);
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("ok", false, "message", "Error processing checkout: " + e.getMessage()));
         }
     }
 }

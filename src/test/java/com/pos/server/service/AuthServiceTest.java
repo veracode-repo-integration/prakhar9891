@@ -29,15 +29,19 @@ public class AuthServiceTest {
 
     @Test
     void testRegister() {
+        com.pos.server.dto.RegisterRequest request = new com.pos.server.dto.RegisterRequest();
+        request.setUsername("testuser");
+        request.setPassword("plainpass");
+
         User user = new User();
         user.setUsername("testuser");
-        user.setPasswordHash("plainpass");
+        user.setPasswordHash("hashedpass");
 
         when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
         when(passwordEncoder.encode("plainpass")).thenReturn("hashedpass");
         when(userRepository.save(any(User.class))).thenReturn(user);
 
-        User registered = authService.register(user);
+        User registered = authService.register(request);
         assertNotNull(registered);
     }
 

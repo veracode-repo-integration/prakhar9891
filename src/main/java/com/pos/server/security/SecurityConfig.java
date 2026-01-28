@@ -22,20 +22,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors().and().csrf().disable()
+                // 1. ENABLE CORS
+                .cors().configurationSource(corsConfigurationSource())
+                .and()
+                // 2. DISABLE CSRF (Fixes 403 on POST/PUT)
+                .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeRequests()
-                .antMatchers("/api/login", "/api/register", "/api/send-otp").permitAll()
-                .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll() // Swagger
-                .antMatchers("/actuator/health").permitAll() // Actuator Health
-                .antMatchers("/h2-console/**").permitAll() // Allow H2 Console
-                .anyRequest().authenticated(); // LOCKDOWN: Everything else requires a valid Token
+                // Public endpoints
+                .antMatchers("/api/auth/**").permitAll()
+                .antMatchers("/api/**").permitAll() // Allow all API endpoints for development
+                .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                .antMatchers("/actuator/health", "/actuator/info").permitAll()
+                // Secure all other endpoints
+                .anyRequest().authenticated();
 
         // Fix for H2 console frame options
         http.headers().frameOptions().disable();
-        // Security Headers
-        http.headers().xssProtection().and().contentSecurityPolicy("script-src 'self'");
 
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -51,5 +55,26 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
             throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${app.allowed.origins:*}")
+    private String allowedOrigins;
+
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
+        // Allow Frontend
+        if (allowedOrigins.equals("*")) {
+            configuration.setAllowedOrigins(java.util.Collections.singletonList("*"));
+        } else {
+            configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
+        }
+        configuration
+                .setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
+        configuration.setAllowedHeaders(java.util.List.of("*"));
+        configuration.setAllowCredentials(!allowedOrigins.equals("*"));
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

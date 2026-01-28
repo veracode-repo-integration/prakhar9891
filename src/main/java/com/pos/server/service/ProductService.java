@@ -32,4 +32,26 @@ public class ProductService {
     public Optional<Product> getProduct(String id) {
         return productRepository.findById(id);
     }
+
+    public Product updateProduct(String id, Product updates) {
+        return productRepository.findById(id)
+                .map(product -> {
+                    if (updates.getName() != null)
+                        product.setName(updates.getName());
+                    if (updates.getPrice() > 0)
+                        product.setPrice(updates.getPrice());
+                    if (updates.getCategory() != null)
+                        product.setCategory(updates.getCategory());
+                    if (updates.getStock() >= 0)
+                        product.setStock(updates.getStock());
+                    if (updates.getImage() != null)
+                        product.setImage(updates.getImage());
+                    if (updates.getBarcode() != null)
+                        product.setBarcode(updates.getBarcode());
+                    if (updates.getComposition() != null)
+                        product.setComposition(updates.getComposition());
+                    return productRepository.save(product);
+                })
+                .orElse(null);
+    }
 }
