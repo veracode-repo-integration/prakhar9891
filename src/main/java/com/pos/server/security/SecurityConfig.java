@@ -63,16 +63,24 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
-        // Allow Frontend
+
+        // Use allowedOriginPatterns instead of allowedOrigins for better support
         if (allowedOrigins.equals("*")) {
-            configuration.setAllowedOrigins(java.util.Collections.singletonList("*"));
+            configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
         } else {
-            configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
+            java.util.List<String> origins = new java.util.ArrayList<>(
+                    java.util.Arrays.asList(allowedOrigins.split(",")));
+            // Ensure common patterns are allowed
+            origins.add("https://*.vercel.app");
+            origins.add("http://localhost:[*]");
+            configuration.setAllowedOriginPatterns(origins);
         }
+
         configuration
                 .setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         configuration.setAllowedHeaders(java.util.List.of("*"));
-        configuration.setAllowCredentials(!allowedOrigins.equals("*"));
+        configuration.setAllowCredentials(true);
+
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
