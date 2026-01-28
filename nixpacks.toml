@@ -1,6 +1,0 @@
-[variables]
-    NIXPACKS_JDK_VERSION = "11"
-    NIXPACKS_MVN_ARGS = "-DskipTests"
-
-[phases.build]
-    cmds = ["mvn -DskipTests clean install"]
