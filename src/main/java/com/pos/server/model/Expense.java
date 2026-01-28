@@ -14,13 +14,29 @@ public class Expense {
     private String id;
 
     @Column(nullable = false)
+    private String name; // Who spent it
+
+    // Legacy support for DB constraint
     private String title;
 
     private double amount;
     private String category;
-    private String notes;
+
+    @Column(columnDefinition = "TEXT")
+    private String reason;
+
+    private String mobile;
 
     // Timestamp
-    private String createdAt; // ISO string
-    private String date; // ISO Date (for backward compatibility)
+    private String createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.title == null) {
+            this.title = (this.name != null) ? this.name : "Expense";
+        }
+        if (this.createdAt == null) {
+            this.createdAt = java.time.Instant.now().toString();
+        }
+    }
 }

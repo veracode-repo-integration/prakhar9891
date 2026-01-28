@@ -6,3 +6,16 @@ compile_log.txt
 .classpath
 .settings/
 bin/
+.env
+.mvn/
+mvnw
+mvnw.cmd
+.vscode/
+build_log*.txt
+package_output.log
+startup_*.log
+test_results*.txt
+temp_*.txt
+*.bat
+!run-backend.bat
+!start_backend_fix.bat

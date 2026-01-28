@@ -34,6 +34,12 @@ public class CommonDataController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
+    @PutMapping("/customers/{id}")
+    public ResponseEntity<?> updateCustomer(@PathVariable String id, @RequestBody Customer customer) {
+        customer.setId(id);
+        return ResponseEntity.ok(Map.of("ok", true, "customer", dataService.saveCustomer(customer)));
+    }
+
     // Expenses
     @GetMapping("/expenses")
     public List<Expense> getExpenses() {

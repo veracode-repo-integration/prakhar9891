@@ -121,4 +121,21 @@ public class OrderService {
         // Keeping this for backward compatibility if other services use it
         return orderRepository.save(order);
     }
+
+    @Transactional
+    public Order updateOrder(String id, Order updates) {
+        Optional<Order> orderOpt = orderRepository.findById(id);
+        if (orderOpt.isPresent()) {
+            Order order = orderOpt.get();
+            // Partial Update Logic
+            if (updates.getStatus() != null)
+                order.setStatus(updates.getStatus());
+            if (updates.getKitchenStatus() != null)
+                order.setKitchenStatus(updates.getKitchenStatus());
+
+            return orderRepository.save(order);
+        }
+        return null;
+    }
+
 }

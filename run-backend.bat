@@ -22,6 +22,6 @@ echo Press Ctrl+C to stop
 echo.
 
 REM Run with Maven
-call mvn spring-boot:run
+call mvn spring-boot:run -DskipTests
 
 pause

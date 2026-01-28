@@ -67,6 +67,9 @@ public class Order {
     @Column(nullable = false)
     private String orderType = "dine-in"; // 'dine-in', 'takeaway', 'delivery'
 
+    // Kitchen Status
+    private String kitchenStatus = "pending"; // 'pending', 'preparing', 'ready', 'served'
+
     // Loyalty
     private int pointsEarned = 0;
 }

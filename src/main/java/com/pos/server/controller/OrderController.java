@@ -38,4 +38,14 @@ public class OrderController {
                     .body(Map.of("ok", false, "message", "Error processing checkout: " + e.getMessage()));
         }
     }
+
+    @PutMapping("/pos-orders/{id}")
+    public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates) {
+        Order updated = orderService.updateOrder(id, updates);
+        if (updated != null) {
+            return ResponseEntity.ok(Map.of("ok", true, "order", updated));
+        }
+        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+    }
+
 }
