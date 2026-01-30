@@ -10,4 +10,9 @@ public class PosServerApplication {
 		SpringApplication.run(PosServerApplication.class, args);
 	}
 
+	@javax.annotation.PostConstruct
+	public void debugStartup() {
+		System.out.println("🚀 APPLICATION STARTING ON PORT: " + System.getenv("PORT"));
+		System.out.println("🐘 DATABASE URL IN USE: " + System.getProperty("spring.datasource.url"));
+	}
 }
