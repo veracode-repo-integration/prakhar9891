@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "tables")
+@Table(name = "pos_tables")
 public class RestaurantTable {
     @Id
     private String id;
