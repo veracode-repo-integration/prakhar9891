@@ -11,7 +11,7 @@ import java.util.ArrayList;
  */
 @Entity
 @Data
-@Table(name = "orders")
+@Table(name = "pos_orders")
 public class Order {
     @Id
     private String id; // UUID or unique readable ID
@@ -23,7 +23,7 @@ public class Order {
 
     // Pricing
     private double subtotal;
-    
+
     // Normalized Discount
     private String discountType; // 'amount', 'percent'
     private double discountValue;
@@ -52,12 +52,12 @@ public class Order {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User creator;
-    
+
     private String user; // Username snapshot for display
 
     // Status
     @Column(nullable = false)
-    private String status = "completed"; 
+    private String status = "completed";
 
     private boolean isRefunded = false;
 
@@ -82,7 +82,7 @@ public class Order {
     private double refundedTaxAmount = 0.0;
     private String refundedAt;
     private String refundMethod;
-    
+
     @Column(columnDefinition = "TEXT")
     private String refundedItemsJson; // Keep as JSON for audit or normalize to Refund entity if needed
 }
