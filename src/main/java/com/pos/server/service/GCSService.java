@@ -31,12 +31,8 @@ public class GCSService {
 
     @PostConstruct
     public void init() throws IOException {
-        // Automatically uses application default credentials (ADC) or service account
-        // from env
-        this.storage = StorageOptions.newBuilder()
-                .setProjectId(projectId)
-                .build()
-                .getService();
+        // Automatically uses Metadata server for identity and project info
+        this.storage = StorageOptions.getDefaultInstance().getService();
     }
 
     /**
