@@ -40,7 +40,7 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           region: ${{ env.REGION }}
-          flags: --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-db-instance --memory=1Gi --cpu=1 --port=4000
+          flags: --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-db-instance --memory=1Gi --cpu=1 --port=4000 --timeout=600s
           env_vars: |-
             SPRING_PROFILES_ACTIVE=prod
             DB_URL=${{ secrets.DB_URL }}
