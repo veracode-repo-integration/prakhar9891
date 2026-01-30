@@ -1,7 +1,7 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: none # Never use 'update' in production
+      ddl-auto: update # Changed to 'update' for the first PostgreSQL deployment to create tables
     show-sql: false
 
   # In production, hikari settings are tuned for Cloud Run

@@ -11,7 +11,8 @@ public class JwtUtils {
     @org.springframework.beans.factory.annotation.Value("${pos.jwt.secret:pos_system_ultra_secure_secret_key_1234567890}")
     private String jwtSecret;
 
-    private final long EXPIRATION_MS = 86400000 * 7; // 7 days for better UX
+    @org.springframework.beans.factory.annotation.Value("${pos.jwt.expiration:604800000}") // Default 7 days
+    private long expirationMs;
 
     private Key getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes();
@@ -22,7 +23,7 @@ public class JwtUtils {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey())
                 .compact();
     }

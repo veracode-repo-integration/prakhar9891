@@ -49,9 +49,10 @@ management:
       show-details: always
 
 # Custom Security Props
-jwt:
-  secret: ${JWT_SECRET:pos_system_ultra_secure_secret_key_1234567890}
-  expiration: 86400000
+pos:
+  jwt:
+    secret: ${JWT_SECRET:pos_system_ultra_secure_secret_key_1234567890}
+    expiration: 86400000
 
 app:
   allowed:
