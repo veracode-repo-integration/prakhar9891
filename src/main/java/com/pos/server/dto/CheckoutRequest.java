@@ -23,4 +23,5 @@ public class CheckoutRequest {
     private boolean payLater;
     private double payLaterAmount;
     private int pointsEarned;
+    private String kitchenStatus; // 'pending', 'ready'
 }

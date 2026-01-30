@@ -16,4 +16,8 @@ public class Settings {
     private String gstNumber;
     private String address;
     private String footerMessage;
+
+    // Store Location for Geofencing
+    private double latitude;
+    private double longitude;
 }

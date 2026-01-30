@@ -72,4 +72,13 @@ public class Order {
 
     // Loyalty
     private int pointsEarned = 0;
+
+    // Refund Tracking (New fields for production sync)
+    private double partialRefundAmount = 0.0;
+    private double refundedTaxAmount = 0.0;
+    private String refundedAt;
+    private String refundMethod;
+
+    @Column(columnDefinition = "TEXT")
+    private String refundedItemsJson; // JSON list of items that were refunded
 }

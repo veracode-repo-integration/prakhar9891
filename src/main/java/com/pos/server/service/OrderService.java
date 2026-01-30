@@ -92,6 +92,7 @@ public class OrderService {
         order.setPayLater(request.isPayLater());
         order.setPayLaterAmount(request.getPayLaterAmount());
         order.setPointsEarned(request.getPointsEarned());
+        order.setKitchenStatus(request.getKitchenStatus());
 
         if (request.getStatus() != null) {
             order.setStatus(request.getStatus());
@@ -132,6 +133,18 @@ public class OrderService {
                 order.setStatus(updates.getStatus());
             if (updates.getKitchenStatus() != null)
                 order.setKitchenStatus(updates.getKitchenStatus());
+
+            // Refund Update Logic (New fields)
+            if (updates.getPartialRefundAmount() > 0)
+                order.setPartialRefundAmount(updates.getPartialRefundAmount());
+            if (updates.getRefundedTaxAmount() > 0)
+                order.setRefundedTaxAmount(updates.getRefundedTaxAmount());
+            if (updates.getRefundedAt() != null)
+                order.setRefundedAt(updates.getRefundedAt());
+            if (updates.getRefundMethod() != null)
+                order.setRefundMethod(updates.getRefundMethod());
+            if (updates.getRefundedItemsJson() != null)
+                order.setRefundedItemsJson(updates.getRefundedItemsJson());
 
             return orderRepository.save(order);
         }
