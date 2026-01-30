@@ -1,0 +1,21 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none # Never use 'update' in production
+    show-sql: false
+
+  # In production, hikari settings are tuned for Cloud Run
+  datasource:
+    hikari:
+      maximum-pool-size: 5 # Cloud Run instances are ephemeral
+      connection-timeout: 30000
+
+# Strict security for production
+app:
+  allowed:
+    origins: ${ALLOWED_ORIGINS:https://your-frontend-domain.com}
+
+logging:
+  level:
+    root: INFO
+    com.pos.server: INFO

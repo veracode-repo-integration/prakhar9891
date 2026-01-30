@@ -54,4 +54,17 @@ public class AuthController {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
         }
     }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount() {
+        try {
+            org.springframework.security.core.Authentication auth = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String username = auth.getName();
+            authService.deleteUser(username);
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Account deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 }

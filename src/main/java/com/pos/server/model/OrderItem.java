@@ -1,11 +1,8 @@
 package com.pos.server.model;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import lombok.Data;
+import java.util.List;
 
 @Entity
 @Data
@@ -19,4 +16,14 @@ public class OrderItem {
     private String name;
     private double price;
     private int qty;
+    private String cartId; // Unique ID for variant/modifier combo
+
+    @ElementCollection
+    @CollectionTable(name = "order_item_modifiers", joinColumns = @JoinColumn(name = "order_item_id"))
+    @Column(name = "modifier_name")
+    private List<String> modifiers;
+    
+    @ManyToOne
+    @JoinColumn(name = "order_id")
+    private Order order;
 }

@@ -2,19 +2,18 @@ package com.pos.server.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pos.server.dto.CheckoutRequest;
-import com.pos.server.model.Order;
-import com.pos.server.model.OrderItem;
-import com.pos.server.model.Product;
-import com.pos.server.repository.OrderRepository;
-import com.pos.server.repository.ProductRepository;
+import com.pos.server.model.*;
+import com.pos.server.repository.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -26,6 +25,12 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private CustomerRepository customerRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders() {
@@ -33,93 +38,122 @@ public class OrderService {
     }
 
     @Transactional
+    @SuppressWarnings("unchecked")
     public Order processCheckout(CheckoutRequest request) throws Exception {
-        log.info("Processing checkout for table: {}, type: {}", request.getTableId(), request.getOrderType());
+        log.info("Processing normalized checkout for table: {}, type: {}", request.getTableId(), request.getOrderType());
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Items list cannot be null or empty");
         }
 
         Order order = new Order();
-        order.setId("ORD-" + System.currentTimeMillis());
-        order.setItems(request.getItems());
+        // GOAL 1: DUPLICATE ID FIX - Use UUID or check for existing ID from frontend
+        // If frontend sends an ID, use it (it should be a UUID now), otherwise generate
+        // Actually, I'll prefer UUID for production.
+        order.setId(UUID.randomUUID().toString()); 
+        
         order.setCreatedAt(System.currentTimeMillis());
         order.setDate(java.time.Instant.now().toString());
+        order.setKitchenStatus(request.getKitchenStatus() != null ? request.getKitchenStatus() : "pending");
+        order.setOrderType(request.getOrderType() != null ? request.getOrderType() : "dine-in");
+        order.setTableId(request.getTableId());
 
-        // Payment Info & Customer
-        if (request.getPaymentInfo() != null) {
-            order.setMethod((String) request.getPaymentInfo().get("method"));
-            order.setNote((String) request.getPaymentInfo().get("note"));
-            order.setPaymentInfoJson(mapper.writeValueAsString(request.getPaymentInfo()));
-
-            if (request.getPaymentInfo().containsKey("customer")) {
-                order.setCustomerJson(mapper.writeValueAsString(request.getPaymentInfo().get("customer")));
+        // 1. Map Items (Normalize Modifiers)
+        List<OrderItem> items = new ArrayList<>();
+        for (OrderItem reqItem : request.getItems()) {
+            OrderItem item = new OrderItem();
+            item.setId(reqItem.getId());
+            item.setName(reqItem.getName());
+            item.setPrice(reqItem.getPrice());
+            item.setQty(reqItem.getQty());
+            item.setModifiers(reqItem.getModifiers());
+            item.setOrder(order);
+            items.add(item);
+            
+            // Stock Reduction
+            Optional<Product> pOpt = productRepository.findById(reqItem.getId());
+            if (pOpt.isPresent()) {
+                Product p = pOpt.get();
+                p.setStock(Math.max(0, p.getStock() - reqItem.getQty()));
+                productRepository.save(p);
             }
         }
+        order.setItems(items);
 
-        // User Mapping
-        if (request.getUser() != null) {
-            Object userObj = request.getUser();
-            if (userObj instanceof String) {
-                order.setUserJson((String) userObj);
-                order.setUser((String) userObj);
+        // 2. Map Payment & Customer (Normalize)
+        if (request.getPaymentInfo() != null) {
+            Map<String, Object> payInfo = request.getPaymentInfo();
+            order.setMethod((String) payInfo.get("method"));
+            order.setNote((String) payInfo.get("note"));
+
+            // Handle Payments List
+            List<PaymentDetail> payments = new ArrayList<>();
+            Object splitPayments = payInfo.get("payments");
+            if (splitPayments instanceof List) {
+                for (Map<String, Object> p : (List<Map<String, Object>>) splitPayments) {
+                    PaymentDetail pd = new PaymentDetail();
+                    pd.setMethod((String) p.get("method"));
+                    pd.setAmount(Double.parseDouble(p.get("amount").toString()));
+                    pd.setReference((String) p.get("reference"));
+                    pd.setOrder(order);
+                    payments.add(pd);
+                }
             } else {
-                order.setUserJson(mapper.writeValueAsString(userObj));
-                if (userObj instanceof Map) {
-                    order.setUser((String) ((Map) userObj).getOrDefault("username", "unknown"));
+                // Single payment
+                PaymentDetail pd = new PaymentDetail();
+                pd.setMethod((String) payInfo.get("method"));
+                pd.setAmount(request.getTotal());
+                pd.setOrder(order);
+                payments.add(pd);
+            }
+            order.setPayments(payments);
+
+            // Handle Customer Linkage
+            if (payInfo.containsKey("customer")) {
+                Map<String, Object> custMap = (Map<String, Object>) payInfo.get("customer");
+                String mobile = (String) custMap.get("mobile");
+                if (mobile != null) {
+                    List<Customer> customers = customerRepository.findByMobile(mobile);
+                    if (!customers.isEmpty()) {
+                        order.setCustomer(customers.get(0));
+                    }
                 }
             }
         }
 
-        // Financials
-        double subtotal = request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum();
-        order.setSubtotal(subtotal);
-        if (request.getTotal() > 0) {
-            order.setTotal(request.getTotal());
-            order.setTaxAmount(request.getTaxAmount());
-            order.setTaxRate(request.getTaxRate());
-        } else {
-            order.setTotal(subtotal);
-        }
-
-        if (request.getDiscount() != null) {
-            order.setDiscountJson(mapper.writeValueAsString(request.getDiscount()));
-        }
-
-        // Meta Data
-        order.setOrderType(request.getOrderType() != null ? request.getOrderType() : "dine-in");
-        order.setTableId(request.getTableId());
-        order.setPayLater(request.isPayLater());
-        order.setPayLaterAmount(request.getPayLaterAmount());
-        order.setPointsEarned(request.getPointsEarned());
-        order.setKitchenStatus(request.getKitchenStatus());
-
-        if (request.getStatus() != null) {
-            order.setStatus(request.getStatus());
-        } else {
-            order.setStatus(request.isPayLater() ? "pending" : "completed");
-        }
-
-        // Stock Reduction logic
-        for (OrderItem item : order.getItems()) {
-            Optional<Product> pOpt = productRepository.findById(item.getId());
-            if (pOpt.isPresent()) {
-                Product p = pOpt.get();
-                int newStock = Math.max(0, p.getStock() - item.getQty());
-                p.setStock(newStock);
-                productRepository.save(p);
-                log.debug("Updated stock for product {}: {} -> {}", p.getId(), p.getStock() + item.getQty(), newStock);
+        // 3. User Linkage
+        if (request.getUser() != null) {
+            Object userObj = request.getUser();
+            String username = null;
+            if (userObj instanceof String) {
+                username = (String) userObj;
+            } else if (userObj instanceof Map) {
+                username = (String) ((Map) userObj).get("username");
+            }
+            
+            if (username != null) {
+                order.setUser(username);
+                Optional<User> uOpt = userRepository.findByUsername(username);
+                uOpt.ifPresent(order::setCreator);
             }
         }
 
-        Order saved = orderRepository.save(order);
-        log.info("Order saved successfully: {}", saved.getId());
-        return saved;
-    }
+        // 4. Financials
+        order.setSubtotal(request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum());
+        order.setTaxRate(request.getTaxRate());
+        order.setTaxAmount(request.getTaxAmount());
+        order.setTotal(request.getTotal());
 
-    @Transactional
-    public Order createOrder(Order order) {
-        // Keeping this for backward compatibility if other services use it
+        if (request.getDiscount() != null) {
+            order.setDiscountType((String) request.getDiscount().get("type"));
+            order.setDiscountValue(Double.parseDouble(request.getDiscount().get("value").toString()));
+        }
+
+        order.setPayLater(request.isPayLater());
+        order.setPayLaterAmount(request.getPayLaterAmount());
+        order.setPointsEarned(request.getPointsEarned());
+        order.setStatus(request.getStatus() != null ? request.getStatus() : (request.isPayLater() ? "pending" : "completed"));
+
         return orderRepository.save(order);
     }
 
@@ -128,27 +162,18 @@ public class OrderService {
         Optional<Order> orderOpt = orderRepository.findById(id);
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
-            // Partial Update Logic
-            if (updates.getStatus() != null)
-                order.setStatus(updates.getStatus());
-            if (updates.getKitchenStatus() != null)
-                order.setKitchenStatus(updates.getKitchenStatus());
-
-            // Refund Update Logic (New fields)
-            if (updates.getPartialRefundAmount() > 0)
-                order.setPartialRefundAmount(updates.getPartialRefundAmount());
-            if (updates.getRefundedTaxAmount() > 0)
-                order.setRefundedTaxAmount(updates.getRefundedTaxAmount());
-            if (updates.getRefundedAt() != null)
-                order.setRefundedAt(updates.getRefundedAt());
-            if (updates.getRefundMethod() != null)
-                order.setRefundMethod(updates.getRefundMethod());
-            if (updates.getRefundedItemsJson() != null)
-                order.setRefundedItemsJson(updates.getRefundedItemsJson());
+            if (updates.getStatus() != null) order.setStatus(updates.getStatus());
+            if (updates.getKitchenStatus() != null) order.setKitchenStatus(updates.getKitchenStatus());
+            
+            // Refund Login
+            if (updates.getPartialRefundAmount() > 0) order.setPartialRefundAmount(updates.getPartialRefundAmount());
+            if (updates.getRefundedTaxAmount() > 0) order.setRefundedTaxAmount(updates.getRefundedTaxAmount());
+            if (updates.getRefundedAt() != null) order.setRefundedAt(updates.getRefundedAt());
+            if (updates.getRefundMethod() != null) order.setRefundMethod(updates.getRefundMethod());
+            if (updates.getRefundedItemsJson() != null) order.setRefundedItemsJson(updates.getRefundedItemsJson());
 
             return orderRepository.save(order);
         }
         return null;
     }
-
 }

@@ -48,4 +48,10 @@ public class AuthService {
         }
         throw new RuntimeException("Invalid credentials");
     }
+
+    public void deleteUser(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.delete(user);
+    }
 }

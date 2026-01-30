@@ -34,10 +34,10 @@ public class SecurityConfig {
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 // Public endpoints
                 .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/api/**").permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health", "/actuator/info").permitAll()
-                // Secure all other endpoints
+                // Secure all other POS logic
+                .antMatchers("/api/**").authenticated()
                 .anyRequest().authenticated();
 
         // Fix for H2 console frame options
@@ -66,8 +66,12 @@ public class SecurityConfig {
     public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
 
-        // Allow all origins via pattern to support credentials
-        configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
+        // Use configured origins
+        if (allowedOrigins != null && !allowedOrigins.equals("*")) {
+            configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
+        } else {
+            configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
+        }
 
         configuration
                 .setAllowedMethods(java.util.Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
