@@ -14,6 +14,9 @@ public class ProductService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private GCSService gcsService;
+
     public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
@@ -22,6 +25,17 @@ public class ProductService {
         if (product.getId() == null || product.getId().isEmpty()) {
             product.setId("prod-" + UUID.randomUUID().toString());
         }
+
+        // Handle Image Upload if base64
+        try {
+            if (product.getImage() != null && product.getImage().startsWith("data:image")) {
+                String imageUrl = gcsService.uploadBase64Image(product.getImage(), "products");
+                product.setImage(imageUrl);
+            }
+        } catch (Exception e) {
+            System.err.println("GCS Upload failed for product: " + e.getMessage());
+        }
+
         return productRepository.save(product);
     }
 
@@ -44,8 +58,21 @@ public class ProductService {
                         product.setCategory(updates.getCategory());
                     if (updates.getStock() >= 0)
                         product.setStock(updates.getStock());
-                    if (updates.getImage() != null)
-                        product.setImage(updates.getImage());
+
+                    if (updates.getImage() != null) {
+                        try {
+                            if (updates.getImage().startsWith("data:image")) {
+                                String imageUrl = gcsService.uploadBase64Image(updates.getImage(), "products");
+                                product.setImage(imageUrl);
+                            } else {
+                                product.setImage(updates.getImage());
+                            }
+                        } catch (Exception e) {
+                            System.err.println("GCS Upload failed during update: " + e.getMessage());
+                            product.setImage(updates.getImage());
+                        }
+                    }
+
                     if (updates.getBarcode() != null)
                         product.setBarcode(updates.getBarcode());
                     if (updates.getComposition() != null)

@@ -53,6 +53,21 @@ This guide helps you set up MySQL for your POS application where multiple users 
 3. **Get Connection Details** from "Variables" tab
 4. **Update `.env`** with Railway credentials
 
+#### C. Using Google Cloud SQL (MySQL) ☁️
+
+1.  **Enable APIs**: 
+    ```bash
+    gcloud services enable artifactregistry.googleapis.com sqladmin.googleapis.com
+    ```
+2.  **Create Repository**:
+    ```bash
+    gcloud artifacts repositories create pos-repo --repository-format=docker --location=us-central1
+    ```
+3.  **Create Instance**: Create a MySQL instance in `us-central1`.
+4.  **GitHub Secret `DB_URL`**: Use this format:
+    `jdbc:mysql:///posdb?cloudSqlInstance=YOUR_PROJECT_ID:us-central1:YOUR_INSTANCE_ID&socketFactory=com.google.cloud.sql.mysql.SocketFactory`
+5.  **Cloud Run Connection**: Under "Cloud SQL Connections", add your instance to the Cloud Run service.
+
 ---
 
 ### **Option 2: Local MySQL (For Testing Only)** 🏠
