@@ -34,6 +34,9 @@ public class OrderService {
     @Autowired
     private RestaurantTableRepository tableRepository;
 
+    @Autowired
+    private CreditTransactionRepository creditTransactionRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders() {
@@ -189,6 +192,21 @@ public class OrderService {
                 tableRepository.save(table);
                 log.info("Table {} vacated successfully after checkout", request.getTableId());
             });
+        }
+
+        // --- ADD TO CREDIT LEDGER IF PAY LATER ---
+        if (savedOrder.isPayLater() && savedOrder.getCustomer() != null) {
+            CreditTransaction tx = new CreditTransaction();
+            tx.setId("ORD-" + savedOrder.getId());
+            tx.setMobile(savedOrder.getCustomer().getMobile());
+            tx.setName(savedOrder.getCustomer().getName());
+            tx.setType("order");
+            tx.setAmount(savedOrder.getTotal());
+            tx.setDate(System.currentTimeMillis());
+            tx.setOrderId(savedOrder.getId());
+            tx.setNote("Pay Later Order #" + savedOrder.getId());
+            creditTransactionRepository.save(tx);
+            log.info("Credit transaction recorded for Pay Later order: {}", savedOrder.getId());
         }
 
         return savedOrder;
