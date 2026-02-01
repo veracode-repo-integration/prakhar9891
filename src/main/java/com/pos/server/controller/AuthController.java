@@ -25,8 +25,20 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody com.pos.server.dto.RegisterRequest request) {
         try {
-            authService.register(request);
-            return ResponseEntity.ok(Map.of("ok", true));
+            User user = authService.register(request);
+            String token = jwtUtils.generateToken(user.getUsername());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("ok", true);
+            response.put("token", token);
+            response.put("user", new com.pos.server.dto.UserResponse(
+                    user.getDbId(),
+                    user.getUsername(),
+                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
+                    user.getEmail(),
+                    user.getContact(),
+                    user.getRole()));
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
         }
@@ -58,8 +70,8 @@ public class AuthController {
     @DeleteMapping("/delete-account")
     public ResponseEntity<?> deleteAccount() {
         try {
-            org.springframework.security.core.Authentication auth = 
-                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
             String username = auth.getName();
             authService.deleteUser(username);
             return ResponseEntity.ok(Map.of("ok", true, "message", "Account deleted successfully"));
