@@ -38,10 +38,10 @@ jobs:
           gcloud run deploy pos-backend \
             --image us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} \
             --region us-central1 \
-            --add-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance \
+            --set-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance \
             --memory=1Gi \
             --cpu=1 \
             --port=4000 \
             --timeout=600s \
             --allow-unauthenticated \
-            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=jdbc:postgresql:///posdb?cloudSqlInstance=udhyog-khaata-pos:us-central1:pos-db-instance&socketFactory=com.google.cloud.sql.postgres.SocketFactory,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=jdbc:postgresql:///posdb,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
