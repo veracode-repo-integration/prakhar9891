@@ -39,8 +39,8 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           region: ${{ env.REGION }}
-          # FIX: port=4000 and pos-postgres-instance
-          flags: --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-postgres-instance --memory=1Gi --cpu=1 --port=4000 --timeout=600s --allow-unauthenticated
+          # MATCHING SUCCESS BUILD EXACTLY: Both instances added
+          flags: --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-db-instance,${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-postgres-instance --memory=1Gi --cpu=1 --port=4000 --timeout=600s --allow-unauthenticated
           env_vars: |-
             SPRING_PROFILES_ACTIVE=prod
             DB_URL=${{ secrets.DB_URL }}
