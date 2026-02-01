@@ -8,7 +8,6 @@ env:
   PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
   SERVICE_NAME: pos-backend
-  REPOSITORY: pos-repo
 
 jobs:
   deploy:
@@ -25,8 +24,6 @@ jobs:
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-        with:
-          project_id: udhyog-khaata-pos
 
       - name: 'Docker Auth'
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
@@ -41,7 +38,7 @@ jobs:
           gcloud run deploy pos-backend \
             --image us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} \
             --region us-central1 \
-            --add-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance,udhyog-khaata-pos:us-central1:pos-postgres-instance \
+            --add-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance \
             --memory=1Gi \
             --cpu=1 \
             --port=4000 \
