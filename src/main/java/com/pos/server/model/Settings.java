@@ -20,4 +20,7 @@ public class Settings {
     // Store Location for Geofencing
     private double latitude;
     private double longitude;
+
+    @Column(columnDefinition = "TEXT")
+    private String tableAreas; // Comma-separated or JSON string of area names
 }

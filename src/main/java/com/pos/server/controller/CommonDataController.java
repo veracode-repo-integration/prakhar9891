@@ -83,4 +83,23 @@ public class CommonDataController {
     public ResponseEntity<?> updateCreditNote(@PathVariable String id, @RequestBody CreditNote note) {
         return ResponseEntity.ok(Map.of("ok", true, "note", dataService.updateCreditNote(id, note)));
     }
+
+    // Credit Transactions (Ledger)
+    @GetMapping("/credit-transactions")
+    public List<CreditTransaction> getCreditTransactions(@RequestParam(required = false) String mobile) {
+        if (mobile != null)
+            return dataService.getTransactionsByMobile(mobile);
+        return dataService.getAllCreditTransactions();
+    }
+
+    @PostMapping("/credit-transactions")
+    public ResponseEntity<?> saveCreditTransaction(@RequestBody CreditTransaction tx) {
+        return ResponseEntity.ok(Map.of("ok", true, "transaction", dataService.saveCreditTransaction(tx)));
+    }
+
+    @DeleteMapping("/credit-transactions/mobile/{mobile}")
+    public ResponseEntity<?> deleteCreditTransactions(@PathVariable String mobile) {
+        dataService.deleteTransactionsByMobile(mobile);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
 }

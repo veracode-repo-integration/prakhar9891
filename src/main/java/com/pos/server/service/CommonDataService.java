@@ -18,6 +18,8 @@ public class CommonDataService {
     private SettingsRepository settingsRepository;
     @Autowired
     private CreditNoteRepository creditNoteRepository;
+    @Autowired
+    private CreditTransactionRepository creditTransactionRepository;
 
     // Customers
     public List<Customer> getAllCustomers() {
@@ -93,5 +95,25 @@ public class CommonDataService {
         existing.setUsed(updates.isUsed());
 
         return creditNoteRepository.save(existing);
+    }
+
+    // Credit Ledger (Transactions)
+    public List<CreditTransaction> getAllCreditTransactions() {
+        return creditTransactionRepository.findAll();
+    }
+
+    public List<CreditTransaction> getTransactionsByMobile(String mobile) {
+        return creditTransactionRepository.findByMobile(mobile);
+    }
+
+    public CreditTransaction saveCreditTransaction(CreditTransaction tx) {
+        if (tx.getId() == null)
+            tx.setId(UUID.randomUUID().toString());
+        return creditTransactionRepository.save(tx);
+    }
+
+    public void deleteTransactionsByMobile(String mobile) {
+        List<CreditTransaction> txs = creditTransactionRepository.findByMobile(mobile);
+        creditTransactionRepository.deleteAll(txs);
     }
 }
