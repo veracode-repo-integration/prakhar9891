@@ -24,8 +24,6 @@ jobs:
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
-        with:
-          project_id: udhyog-khaata-pos
 
       - name: 'Docker Auth'
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
@@ -46,4 +44,4 @@ jobs:
             --port=4000 \
             --timeout=600s \
             --allow-unauthenticated \
-            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=${{ secrets.DB_URL }},DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=jdbc:postgresql:///posdb?cloudSqlInstance=udhyog-khaata-pos:us-central1:pos-db-instance&socketFactory=com.google.cloud.sql.postgres.SocketFactory,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
