@@ -66,7 +66,32 @@ public class CommonDataService {
 
     public CreditNote saveCreditNote(CreditNote cn) {
         if (cn.getId() == null)
-            cn.setId(UUID.randomUUID().toString());
+            cn.setId("CN-" + UUID.randomUUID().toString().substring(0, 8));
         return creditNoteRepository.save(cn);
+    }
+
+    public CreditNote updateCreditNote(String id, CreditNote updates) {
+        CreditNote existing = creditNoteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Credit Note not found"));
+
+        if (updates.getCustomerId() != null)
+            existing.setCustomerId(updates.getCustomerId());
+        if (updates.getCustomerName() != null)
+            existing.setCustomerName(updates.getCustomerName());
+        if (updates.getMobile() != null)
+            existing.setMobile(updates.getMobile());
+        if (updates.getAmount() != 0)
+            existing.setAmount(updates.getAmount());
+        if (updates.getReason() != null)
+            existing.setReason(updates.getReason());
+        if (updates.getCreatedAt() != null)
+            existing.setCreatedAt(updates.getCreatedAt());
+        if (updates.getUsedAt() != null)
+            existing.setUsedAt(updates.getUsedAt());
+        if (updates.getDate() != 0)
+            existing.setDate(updates.getDate());
+        existing.setUsed(updates.isUsed());
+
+        return creditNoteRepository.save(existing);
     }
 }

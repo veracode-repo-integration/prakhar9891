@@ -78,4 +78,9 @@ public class CommonDataController {
     public ResponseEntity<?> saveCreditNote(@RequestBody CreditNote note) {
         return ResponseEntity.ok(Map.of("ok", true, "note", dataService.saveCreditNote(note)));
     }
+
+    @PutMapping("/credit-notes/{id}")
+    public ResponseEntity<?> updateCreditNote(@PathVariable String id, @RequestBody CreditNote note) {
+        return ResponseEntity.ok(Map.of("ok", true, "note", dataService.updateCreditNote(id, note)));
+    }
 }
