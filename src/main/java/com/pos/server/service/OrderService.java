@@ -112,15 +112,32 @@ public class OrderService {
             }
             order.setPayments(payments);
 
-            // Handle Customer Linkage
+            // Handle Customer Linkage (Create or Update)
             if (payInfo.containsKey("customer")) {
                 Map<String, Object> custMap = (Map<String, Object>) payInfo.get("customer");
                 String mobile = (String) custMap.get("mobile");
-                if (mobile != null) {
+                String name = (String) custMap.get("name");
+
+                if (mobile != null && !mobile.isEmpty()) {
                     List<Customer> customers = customerRepository.findByMobile(mobile);
+                    Customer customer;
                     if (!customers.isEmpty()) {
-                        order.setCustomer(customers.get(0));
+                        customer = customers.get(0);
+                        // Optional: Update name if provided and different
+                        if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
+                            customer.setName(name);
+                            customerRepository.save(customer);
+                        }
+                    } else {
+                        // Create new customer record
+                        customer = new Customer();
+                        customer.setId(UUID.randomUUID().toString());
+                        customer.setMobile(mobile);
+                        customer.setName(name != null ? name : "Walk-in Customer");
+                        customer.setJoinDate(new java.util.Date().toString());
+                        customer = customerRepository.save(customer);
                     }
+                    order.setCustomer(customer);
                 }
             }
         }
