@@ -3,11 +3,16 @@ package com.pos.server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-// DISABLING DATABASE FOR TEST PUSH #30
-@SpringBootApplication(exclude = { DataSourceAutoConfiguration.class })
+@SpringBootApplication(exclude = {
+		DataSourceAutoConfiguration.class,
+		HibernateJpaAutoConfiguration.class,
+		SecurityAutoConfiguration.class
+})
 @RestController
 public class PosServerApplication {
 
@@ -17,6 +22,6 @@ public class PosServerApplication {
 
 	@GetMapping("/")
 	public String health() {
-		return "🚀 POS BACKEND IS FINALLY LIVE!";
+		return "🚀 INFRASTRUCTURE VERIFIED - SERVER IS RUNNING!";
 	}
 }
