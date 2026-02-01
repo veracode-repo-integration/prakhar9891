@@ -32,7 +32,9 @@ public class SecurityConfig {
                 .authorizeRequests()
                 // Explicitly allow OPTIONS requests
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/", "/api/auth/**", "/api/debug/**").permitAll()
+                .antMatchers("/api/auth/**", "/api/debug/**").permitAll()
+                .antMatchers(org.springframework.http.HttpMethod.GET, "/api/pos-products", "/api/tables/**").permitAll()
+                .antMatchers(org.springframework.http.HttpMethod.PUT, "/api/tables/**").permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health", "/actuator/info").permitAll()
                 // Secure all other POS logic
