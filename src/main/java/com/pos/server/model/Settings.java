@@ -23,4 +23,7 @@ public class Settings {
 
     @Column(columnDefinition = "TEXT")
     private String tableAreas; // Comma-separated or JSON string of area names
+
+    private boolean skipCustomerDetails;
+    private boolean notifications;
 }
