@@ -134,7 +134,7 @@ public class OrderService {
                         customer.setId(UUID.randomUUID().toString());
                         customer.setMobile(mobile);
                         customer.setName(name != null ? name : "Walk-in Customer");
-                        customer.setJoinDate(new java.util.Date().toString());
+                        customer.setJoinedAt(new java.util.Date().toString());
                         customer = customerRepository.save(customer);
                     }
                     order.setCustomer(customer);
