@@ -67,6 +67,27 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile() {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            String username = auth.getName();
+
+            User user = authService.findByUsername(username);
+
+            return ResponseEntity.ok(new com.pos.server.dto.UserResponse(
+                    user.getDbId(),
+                    user.getUsername(),
+                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
+                    user.getEmail(),
+                    user.getContact(),
+                    user.getRole()));
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Unauthorized"));
+        }
+    }
+
     @DeleteMapping("/delete-account")
     public ResponseEntity<?> deleteAccount() {
         try {
