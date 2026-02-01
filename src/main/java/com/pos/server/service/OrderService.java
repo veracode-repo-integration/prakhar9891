@@ -31,6 +31,9 @@ public class OrderService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private RestaurantTableRepository tableRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders() {
@@ -40,7 +43,8 @@ public class OrderService {
     @Transactional
     @SuppressWarnings("unchecked")
     public Order processCheckout(CheckoutRequest request) throws Exception {
-        log.info("Processing normalized checkout for table: {}, type: {}", request.getTableId(), request.getOrderType());
+        log.info("Processing normalized checkout for table: {}, type: {}", request.getTableId(),
+                request.getOrderType());
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Items list cannot be null or empty");
@@ -50,8 +54,8 @@ public class OrderService {
         // GOAL 1: DUPLICATE ID FIX - Use UUID or check for existing ID from frontend
         // If frontend sends an ID, use it (it should be a UUID now), otherwise generate
         // Actually, I'll prefer UUID for production.
-        order.setId(UUID.randomUUID().toString()); 
-        
+        order.setId(UUID.randomUUID().toString());
+
         order.setCreatedAt(System.currentTimeMillis());
         order.setDate(java.time.Instant.now().toString());
         order.setKitchenStatus(request.getKitchenStatus() != null ? request.getKitchenStatus() : "pending");
@@ -69,7 +73,7 @@ public class OrderService {
             item.setModifiers(reqItem.getModifiers());
             item.setOrder(order);
             items.add(item);
-            
+
             // Stock Reduction
             Optional<Product> pOpt = productRepository.findById(reqItem.getId());
             if (pOpt.isPresent()) {
@@ -130,7 +134,7 @@ public class OrderService {
             } else if (userObj instanceof Map) {
                 username = (String) ((Map) userObj).get("username");
             }
-            
+
             if (username != null) {
                 order.setUser(username);
                 Optional<User> uOpt = userRepository.findByUsername(username);
@@ -152,9 +156,25 @@ public class OrderService {
         order.setPayLater(request.isPayLater());
         order.setPayLaterAmount(request.getPayLaterAmount());
         order.setPointsEarned(request.getPointsEarned());
-        order.setStatus(request.getStatus() != null ? request.getStatus() : (request.isPayLater() ? "pending" : "completed"));
+        order.setStatus(
+                request.getStatus() != null ? request.getStatus() : (request.isPayLater() ? "pending" : "completed"));
 
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        // --- VACATE TABLE IF DINE-IN ---
+        if (request.getTableId() != null && !request.getTableId().isEmpty()) {
+            tableRepository.findById(request.getTableId()).ifPresent(table -> {
+                table.setStatus("available");
+                table.setCurrentOrder(null);
+                table.setGuestCount(0);
+                table.setSessionStart(null);
+                table.setKitchenStatus(null);
+                tableRepository.save(table);
+                log.info("Table {} vacated successfully after checkout", request.getTableId());
+            });
+        }
+
+        return savedOrder;
     }
 
     @Transactional
@@ -162,15 +182,22 @@ public class OrderService {
         Optional<Order> orderOpt = orderRepository.findById(id);
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
-            if (updates.getStatus() != null) order.setStatus(updates.getStatus());
-            if (updates.getKitchenStatus() != null) order.setKitchenStatus(updates.getKitchenStatus());
-            
+            if (updates.getStatus() != null)
+                order.setStatus(updates.getStatus());
+            if (updates.getKitchenStatus() != null)
+                order.setKitchenStatus(updates.getKitchenStatus());
+
             // Refund Login
-            if (updates.getPartialRefundAmount() > 0) order.setPartialRefundAmount(updates.getPartialRefundAmount());
-            if (updates.getRefundedTaxAmount() > 0) order.setRefundedTaxAmount(updates.getRefundedTaxAmount());
-            if (updates.getRefundedAt() != null) order.setRefundedAt(updates.getRefundedAt());
-            if (updates.getRefundMethod() != null) order.setRefundMethod(updates.getRefundMethod());
-            if (updates.getRefundedItemsJson() != null) order.setRefundedItemsJson(updates.getRefundedItemsJson());
+            if (updates.getPartialRefundAmount() > 0)
+                order.setPartialRefundAmount(updates.getPartialRefundAmount());
+            if (updates.getRefundedTaxAmount() > 0)
+                order.setRefundedTaxAmount(updates.getRefundedTaxAmount());
+            if (updates.getRefundedAt() != null)
+                order.setRefundedAt(updates.getRefundedAt());
+            if (updates.getRefundMethod() != null)
+                order.setRefundMethod(updates.getRefundMethod());
+            if (updates.getRefundedItemsJson() != null)
+                order.setRefundedItemsJson(updates.getRefundedItemsJson());
 
             return orderRepository.save(order);
         }
