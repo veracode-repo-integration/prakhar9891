@@ -10,9 +10,8 @@ FROM eclipse-temurin:11-jre
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# JVM Container Awareness Flags
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
-ENV PORT=8080
+# Fix for "Entropy Hang" and Memory
+ENV JAVA_OPTS="-Djava.security.egd=file:/dev/./urandom -XX:MaxRAMPercentage=75.0 -XX:+UseContainerSupport"
 
 EXPOSE 8080
 
