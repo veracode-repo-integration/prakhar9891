@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
   SERVICE_NAME: pos-backend
   REPOSITORY: pos-repo
@@ -21,31 +21,30 @@ jobs:
         uses: 'google-github-actions/auth@v1'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
+          project_id: udhyog-khaata-pos
 
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v1'
+        with:
+          project_id: udhyog-khaata-pos
 
       - name: 'Docker Auth'
-        run: gcloud auth configure-docker ${REGION}-docker.pkg.dev
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
       - name: Build and Push Container
         run: |-
-          docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA} .
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${SERVICE_NAME}:${GITHUB_SHA}
+          docker build -t us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} .
+          docker push us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }}
 
       - name: Deploy to Cloud Run
-        uses: 'google-github-actions/deploy-cloudrun@v1'
-        with:
-          service: ${{ env.SERVICE_NAME }}
-          image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          region: ${{ env.REGION }}
-          # MATCHING SUCCESS BUILD EXACTLY: Both instances added
-          flags: --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-db-instance,${{ env.PROJECT_ID }}:${{ env.REGION }}:pos-postgres-instance --memory=1Gi --cpu=1 --port=4000 --timeout=600s --allow-unauthenticated
-          env_vars: |-
-            SPRING_PROFILES_ACTIVE=prod
-            DB_URL=${{ secrets.DB_URL }}
-            DB_USER=${{ secrets.DB_USER }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
-            GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }}
+        run: |-
+          gcloud run deploy pos-backend \
+            --image us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} \
+            --region us-central1 \
+            --add-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance,udhyog-khaata-pos:us-central1:pos-postgres-instance \
+            --memory=1Gi \
+            --cpu=1 \
+            --port=4000 \
+            --timeout=600s \
+            --allow-unauthenticated \
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=${{ secrets.DB_URL }},DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
