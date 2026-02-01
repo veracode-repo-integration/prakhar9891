@@ -44,4 +44,4 @@ jobs:
             --port=4000 \
             --timeout=600s \
             --allow-unauthenticated \
-            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_URL=jdbc:postgresql:///posdb,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"

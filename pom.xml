@@ -15,6 +15,7 @@
 	<description>POS Backend Server</description>
 	<properties>
 		<java.version>11</java.version>
+		<spring-cloud-gcp.version>3.5.0</spring-cloud-gcp.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -38,16 +39,11 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
+		<!-- ☁️ GOOGLE CLOUD OFFICIAL STARTER (This replaces the manual socket factory) -->
 		<dependency>
-			<groupId>com.google.cloud.sql</groupId>
-			<artifactId>postgres-socket-factory</artifactId>
-			<version>1.22.0</version>
-		</dependency>
-		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
-			<version>42.7.2</version>
-			<scope>runtime</scope>
+			<groupId>com.google.cloud</groupId>
+			<artifactId>spring-cloud-gcp-starter-sql-postgresql</artifactId>
+			<version>${spring-cloud-gcp.version}</version>
 		</dependency>
 
 		<dependency>
