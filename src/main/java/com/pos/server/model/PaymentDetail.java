@@ -11,7 +11,9 @@ public class PaymentDetail {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "payment_method")
     private String method; // 'Cash', 'UPI', 'Card', 'Pay Later'
+
     private double amount;
     private String reference; // Transaction ID or note
 
