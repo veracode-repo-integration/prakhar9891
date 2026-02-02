@@ -151,12 +151,8 @@ public class OrderService {
                 String name = (String) custMap.get("name");
 
                 if (mobile != null && !mobile.isEmpty()) {
-                    List<Customer> customers = customerRepository.findByMobile(mobile);
-                    Customer customer = customers.stream()
-                            .filter(c -> request.getRestaurantId() != null
-                                    && request.getRestaurantId().equalsIgnoreCase(c.getRestaurantId()))
-                            .findFirst()
-                            .orElse(null);
+                    Customer customer = customerRepository.findByMobileAndRestaurantId(mobile,
+                            request.getRestaurantId().toLowerCase().trim()).orElse(null);
 
                     if (customer != null) {
                         if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {

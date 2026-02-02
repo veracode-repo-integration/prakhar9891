@@ -21,6 +21,12 @@ public class CommonDataService {
     @Autowired
     private CreditTransactionRepository creditTransactionRepository;
 
+    public java.util.Optional<Customer> getCustomerByMobile(String mobile, String restaurantId) {
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return java.util.Optional.empty();
+        return customerRepository.findByMobileAndRestaurantId(mobile, restaurantId.toLowerCase().trim());
+    }
+
     // Customers
     public List<Customer> getAllCustomers(String restaurantId) {
         if (restaurantId == null || restaurantId.trim().isEmpty())

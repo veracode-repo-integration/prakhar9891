@@ -19,7 +19,7 @@ public class Order {
     @Column(columnDefinition = "TEXT")
     private String note;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<OrderItem> items = new ArrayList<>();
 
     // Pricing
@@ -48,9 +48,10 @@ public class Order {
     private long createdAt = System.currentTimeMillis();
 
     // Payment Relationship
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     private List<PaymentDetail> payments = new ArrayList<>();
 
+    @Column(name = "payment_method")
     private String method; // Primary method for quick reporting
 
     @Column(name = "payment_id")

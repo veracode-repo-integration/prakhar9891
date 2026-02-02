@@ -25,6 +25,15 @@ public class CommonDataController {
         return dataService.getAllCustomers(rid);
     }
 
+    @GetMapping("/customers/mobile/{mobile}")
+    public ResponseEntity<?> getCustomerByMobile(@PathVariable String mobile,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        return dataService.getCustomerByMobile(mobile, rid)
+                .map(c -> ResponseEntity.ok(Map.of("ok", true, "customer", c)))
+                .orElse(ResponseEntity.ok(Map.of("ok", false, "message", "Customer not found")));
+    }
+
     @PostMapping("/customers")
     public ResponseEntity<?> saveCustomer(@RequestBody Customer customer,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {

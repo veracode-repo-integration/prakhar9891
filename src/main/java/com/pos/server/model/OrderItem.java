@@ -13,7 +13,7 @@ public class OrderItem {
     private String itemId; // Order Line Unique ID
 
     @Column(name = "product_id")
-    private String id; // Product ID reference (Matches frontend 'id')
+    private String productId; // Matches frontend 'id' for product reference
 
     private String name;
     private double price;
