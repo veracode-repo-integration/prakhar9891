@@ -23,7 +23,8 @@ public class OrderController {
 
     @GetMapping("/pos-orders")
     public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        return orderService.getAllOrders(restaurantId);
+        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        return orderService.getAllOrders(rid);
     }
 
     @PostMapping("/checkout")
@@ -45,7 +46,8 @@ public class OrderController {
     @PutMapping("/pos-orders/{id}")
     public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        Order updated = orderService.updateOrder(id, updates, restaurantId);
+        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        Order updated = orderService.updateOrder(id, updates, rid);
         if (updated != null) {
             return ResponseEntity.ok(Map.of("ok", true, "order", updated));
         }

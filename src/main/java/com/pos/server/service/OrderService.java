@@ -37,6 +37,9 @@ public class OrderService {
     @Autowired
     private CreditTransactionRepository creditTransactionRepository;
 
+    @Autowired
+    private StockLogRepository stockLogRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders(String restaurantId) {
@@ -66,11 +69,22 @@ public class OrderService {
         order.setOrderType(request.getOrderType() != null ? request.getOrderType() : "dine-in");
         order.setTableId(request.getTableId());
 
+        String username = null;
+        if (request.getUser() != null) {
+            Object userObj = request.getUser();
+            if (userObj instanceof String) {
+                username = (String) userObj;
+            } else if (userObj instanceof Map) {
+                username = (String) ((Map) userObj).get("username");
+            }
+        }
+
         // 1. Map Items (Normalize Modifiers)
         List<OrderItem> items = new ArrayList<>();
         for (OrderItem reqItem : request.getItems()) {
             OrderItem item = new OrderItem();
-            item.setId(reqItem.getId());
+            item.setItemId(UUID.randomUUID().toString());
+            item.setId(reqItem.getId()); // Product ID
             item.setName(reqItem.getName());
             item.setPrice(reqItem.getPrice());
             item.setQty(reqItem.getQty());
@@ -78,13 +92,26 @@ public class OrderService {
             item.setOrder(order);
             items.add(item);
 
-            // 1.1 Scoped Stock Reduction
+            // 1.1 Scoped Stock Reduction & Logging
             Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getId(),
                     request.getRestaurantId());
             if (pOpt.isPresent()) {
                 Product p = pOpt.get();
-                p.setStock(Math.max(0, p.getStock() - reqItem.getQty()));
+                int oldStock = p.getStock();
+                p.setStock(Math.max(0, oldStock - reqItem.getQty()));
                 productRepository.save(p);
+
+                // Create Stock Log
+                StockLog logEntry = new StockLog();
+                logEntry.setId(UUID.randomUUID().toString());
+                logEntry.setProductId(p.getId());
+                logEntry.setQtyChange(-reqItem.getQty());
+                logEntry.setType("sale");
+                logEntry.setReason("Sale: Order #" + order.getId());
+                logEntry.setUser(username != null ? username : "system");
+                logEntry.setCreatedAt(java.time.Instant.now().toString());
+                logEntry.setRestaurantId(request.getRestaurantId());
+                stockLogRepository.save(logEntry);
             }
         }
         order.setItems(items);
@@ -125,21 +152,18 @@ public class OrderService {
 
                 if (mobile != null && !mobile.isEmpty()) {
                     List<Customer> customers = customerRepository.findByMobile(mobile);
-                    // Filter by restaurantId if multiple customers found (unlikely but safe)
                     Customer customer = customers.stream()
                             .filter(c -> request.getRestaurantId() != null
-                                    && request.getRestaurantId().equals(c.getRestaurantId()))
+                                    && request.getRestaurantId().equalsIgnoreCase(c.getRestaurantId()))
                             .findFirst()
                             .orElse(null);
 
                     if (customer != null) {
-                        // Optional: Update name if provided and different
                         if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
                             customer.setName(name);
                             customerRepository.save(customer);
                         }
                     } else {
-                        // Create new customer record
                         customer = new Customer();
                         customer.setId(UUID.randomUUID().toString());
                         customer.setMobile(mobile);
@@ -154,20 +178,10 @@ public class OrderService {
         }
 
         // 3. User Linkage
-        if (request.getUser() != null) {
-            Object userObj = request.getUser();
-            String username = null;
-            if (userObj instanceof String) {
-                username = (String) userObj;
-            } else if (userObj instanceof Map) {
-                username = (String) ((Map) userObj).get("username");
-            }
-
-            if (username != null) {
-                order.setUser(username);
-                Optional<User> uOpt = userRepository.findByUsername(username);
-                uOpt.ifPresent(order::setCreator);
-            }
+        if (username != null) {
+            order.setUser(username);
+            Optional<User> uOpt = userRepository.findByUsername(username);
+            uOpt.ifPresent(order::setCreator);
         }
 
         // 4. Financials
@@ -191,7 +205,11 @@ public class OrderService {
 
         // --- VACATE TABLE IF DINE-IN ---
         if (request.getTableId() != null && !request.getTableId().isEmpty()) {
-            tableRepository.findById(request.getTableId()).ifPresent(table -> {
+            Optional<RestaurantTable> tOpt = (request.getRestaurantId() != null)
+                    ? tableRepository.findByIdAndRestaurantId(request.getTableId(), request.getRestaurantId())
+                    : tableRepository.findById(request.getTableId());
+
+            tOpt.ifPresent(table -> {
                 table.setStatus("available");
                 table.setCurrentOrder(null);
                 table.setGuestCount(0);

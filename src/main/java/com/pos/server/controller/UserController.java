@@ -35,8 +35,8 @@ public class UserController {
         }
 
         List<User> users;
-        if (restaurantId != null && !restaurantId.isEmpty()) {
-            users = userRepository.findAllByRestaurantId(restaurantId);
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            users = userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
         } else {
             users = userRepository.findAll();
         }
