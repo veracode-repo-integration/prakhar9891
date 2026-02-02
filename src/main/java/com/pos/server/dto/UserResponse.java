@@ -10,15 +10,18 @@ public class UserResponse {
     private String email;
     private String contact;
     private String role;
+    private String restaurantId;
 
     // NO passwordHash field here. IMPOSSIBLE to leak.
 
-    public UserResponse(Long id, String username, String name, String email, String contact, String role) {
+    public UserResponse(Long id, String username, String name, String email, String contact, String role,
+            String restaurantId) {
         this.id = id;
         this.username = username;
         this.name = name;
         this.email = email;
         this.contact = contact;
         this.role = role;
+        this.restaurantId = restaurantId;
     }
 }

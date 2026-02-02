@@ -21,8 +21,11 @@ public class TableService {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public List<RestaurantTable> getAllTables() {
-        return tableRepository.findAll();
+    public List<RestaurantTable> getAllTables(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty()) {
+            return tableRepository.findAll();
+        }
+        return tableRepository.findAllByRestaurantId(restaurantId);
     }
 
     public List<RestaurantTable> getTablesByArea(String area) {

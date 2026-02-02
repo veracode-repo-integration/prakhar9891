@@ -16,4 +16,6 @@ public interface StockLogRepository extends JpaRepository<StockLog, String> {
     List<StockLog> findByType(String type);
 
     List<StockLog> findByUser(String user);
+
+    List<StockLog> findAllByRestaurantId(String restaurantId);
 }

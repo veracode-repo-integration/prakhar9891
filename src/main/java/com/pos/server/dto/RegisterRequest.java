@@ -11,4 +11,5 @@ public class RegisterRequest {
     private String email;
     private String contact;
     private String role;
+    private String restaurantId;
 }

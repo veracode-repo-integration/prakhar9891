@@ -17,8 +17,11 @@ public class ProductService {
     @Autowired
     private GCSService gcsService;
 
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
+    public List<Product> getAllProducts(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty()) {
+            return productRepository.findAll();
+        }
+        return productRepository.findAllByRestaurantId(restaurantId);
     }
 
     public Product saveProduct(Product product) {

@@ -23,24 +23,33 @@ public class UserController {
     // List all users - ADMIN ONLY
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> getAllUsers() {
+    public ResponseEntity<?> getAllUsers(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication();
-        
+
         // Belt and Suspenders: Manual Check + @PreAuthorize
         boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
         if (!isAdmin) {
-             return ResponseEntity.status(403).body(Map.of("message", "Access Denied"));
+            return ResponseEntity.status(403).body(Map.of("message", "Access Denied"));
         }
 
-        return ResponseEntity.ok(userRepository.findAll().stream()
+        List<User> users;
+        if (restaurantId != null && !restaurantId.isEmpty()) {
+            users = userRepository.findAllByRestaurantId(restaurantId);
+        } else {
+            users = userRepository.findAll();
+        }
+
+        return ResponseEntity.ok(users.stream()
                 .map(u -> new UserResponse(
                         u.getDbId(),
                         u.getUsername(),
                         (u.getFirstName() != null ? u.getFirstName() : u.getUsername()),
                         u.getEmail(),
                         u.getContact(),
-                        u.getRole()))
+                        u.getRole(),
+                        u.getRestaurantId()))
                 .collect(Collectors.toList()));
     }
 

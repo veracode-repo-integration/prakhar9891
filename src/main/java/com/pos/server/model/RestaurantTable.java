@@ -28,4 +28,5 @@ public class RestaurantTable {
     private int guestCount = 0;
     private Long sessionStart;
     private String kitchenStatus;
+    private String restaurantId;
 }

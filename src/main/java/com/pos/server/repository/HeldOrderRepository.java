@@ -9,5 +9,5 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface HeldOrderRepository extends JpaRepository<HeldOrder, String> {
-    // All basic CRUD operations inherited from JpaRepository
+    java.util.List<HeldOrder> findAllByRestaurantId(String restaurantId);
 }

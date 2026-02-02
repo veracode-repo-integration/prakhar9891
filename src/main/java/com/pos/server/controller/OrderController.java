@@ -22,13 +22,16 @@ public class OrderController {
     private final ObjectMapper mapper = new ObjectMapper();
 
     @GetMapping("/pos-orders")
-    public List<Order> getOrders() {
-        return orderService.getAllOrders();
+    public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return orderService.getAllOrders(restaurantId);
     }
 
     @PostMapping("/checkout")
-    public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request) {
+    public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            if (restaurantId != null)
+                request.setRestaurantId(restaurantId);
             Order saved = orderService.processCheckout(request);
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
         } catch (IllegalArgumentException e) {

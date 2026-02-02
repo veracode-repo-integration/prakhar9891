@@ -19,4 +19,6 @@ public class CreditTransaction {
 
     private String orderId; // Linked order ID if type is 'order' or 'refund'
     private String note;
+
+    private String restaurantId;
 }

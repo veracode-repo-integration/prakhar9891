@@ -19,4 +19,6 @@ public class Product {
     // For composite products logic if needed later
     @Column(columnDefinition = "TEXT")
     private String composition; // JSON string or logic to be handled
+
+    private String restaurantId;
 }

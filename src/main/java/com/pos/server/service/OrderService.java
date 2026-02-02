@@ -39,25 +39,25 @@ public class OrderService {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    public List<Order> getAllOrders(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty())
+            return orderRepository.findAll();
+        return orderRepository.findAllByRestaurantId(restaurantId);
     }
 
     @Transactional
     @SuppressWarnings("unchecked")
     public Order processCheckout(CheckoutRequest request) throws Exception {
-        log.info("Processing normalized checkout for table: {}, type: {}", request.getTableId(),
-                request.getOrderType());
+        log.info("Processing normalized checkout for table: {}, type: {}, restaurant: {}", request.getTableId(),
+                request.getOrderType(), request.getRestaurantId());
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Items list cannot be null or empty");
         }
 
         Order order = new Order();
-        // GOAL 1: DUPLICATE ID FIX - Use UUID or check for existing ID from frontend
-        // If frontend sends an ID, use it (it should be a UUID now), otherwise generate
-        // Actually, I'll prefer UUID for production.
         order.setId(UUID.randomUUID().toString());
+        order.setRestaurantId(request.getRestaurantId());
 
         order.setCreatedAt(System.currentTimeMillis());
         order.setDate(java.time.Instant.now().toString());
@@ -123,9 +123,14 @@ public class OrderService {
 
                 if (mobile != null && !mobile.isEmpty()) {
                     List<Customer> customers = customerRepository.findByMobile(mobile);
-                    Customer customer;
-                    if (!customers.isEmpty()) {
-                        customer = customers.get(0);
+                    // Filter by restaurantId if multiple customers found (unlikely but safe)
+                    Customer customer = customers.stream()
+                            .filter(c -> request.getRestaurantId() != null
+                                    && request.getRestaurantId().equals(c.getRestaurantId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (customer != null) {
                         // Optional: Update name if provided and different
                         if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
                             customer.setName(name);
@@ -138,6 +143,7 @@ public class OrderService {
                         customer.setMobile(mobile);
                         customer.setName(name != null ? name : "Walk-in Customer");
                         customer.setJoinedAt(new java.util.Date().toString());
+                        customer.setRestaurantId(request.getRestaurantId());
                         customer = customerRepository.save(customer);
                     }
                     order.setCustomer(customer);
@@ -205,6 +211,7 @@ public class OrderService {
             tx.setDate(System.currentTimeMillis());
             tx.setOrderId(savedOrder.getId());
             tx.setNote("Pay Later Order #" + savedOrder.getId());
+            tx.setRestaurantId(request.getRestaurantId());
             creditTransactionRepository.save(tx);
             log.info("Credit transaction recorded for Pay Later order: {}", savedOrder.getId());
         }

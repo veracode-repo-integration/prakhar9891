@@ -8,4 +8,8 @@ import java.util.List;
 @Repository
 public interface CreditTransactionRepository extends JpaRepository<CreditTransaction, String> {
     List<CreditTransaction> findByMobile(String mobile);
+
+    List<CreditTransaction> findByMobileAndRestaurantId(String mobile, String restaurantId);
+
+    List<CreditTransaction> findAllByRestaurantId(String restaurantId);
 }

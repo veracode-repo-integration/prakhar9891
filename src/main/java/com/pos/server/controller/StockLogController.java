@@ -28,7 +28,11 @@ public class StockLogController {
      * GET /api/stock-logs
      */
     @GetMapping("/stock-logs")
-    public ResponseEntity<List<StockLog>> getAllStockLogs() {
+    public ResponseEntity<List<StockLog>> getAllStockLogs(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null && !restaurantId.isEmpty()) {
+            return ResponseEntity.ok(stockLogRepository.findAllByRestaurantId(restaurantId));
+        }
         return ResponseEntity.ok(stockLogRepository.findAll());
     }
 
@@ -55,13 +59,17 @@ public class StockLogController {
      * POST /api/stock-logs
      */
     @PostMapping("/stock-logs")
-    public ResponseEntity<?> createStockLog(@RequestBody StockLog stockLog) {
+    public ResponseEntity<?> createStockLog(@RequestBody StockLog stockLog,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             if (stockLog.getId() == null || stockLog.getId().isEmpty()) {
-                stockLog.setId(String.valueOf(System.currentTimeMillis()));
+                stockLog.setId(java.util.UUID.randomUUID().toString());
             }
             if (stockLog.getCreatedAt() == null) {
                 stockLog.setCreatedAt(Instant.now().toString());
+            }
+            if (restaurantId != null) {
+                stockLog.setRestaurantId(restaurantId);
             }
 
             StockLog saved = stockLogRepository.save(stockLog);

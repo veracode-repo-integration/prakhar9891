@@ -37,7 +37,8 @@ public class AuthController {
                     (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
                     user.getEmail(),
                     user.getContact(),
-                    user.getRole()));
+                    user.getRole(),
+                    user.getRestaurantId()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
@@ -60,7 +61,8 @@ public class AuthController {
                     (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
                     user.getEmail(),
                     user.getContact(),
-                    user.getRole()));
+                    user.getRole(),
+                    user.getRestaurantId()));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));

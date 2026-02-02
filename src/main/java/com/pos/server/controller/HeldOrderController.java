@@ -28,7 +28,11 @@ public class HeldOrderController {
      * GET /api/held-orders
      */
     @GetMapping("/held-orders")
-    public ResponseEntity<List<HeldOrder>> getAllHeldOrders() {
+    public ResponseEntity<List<HeldOrder>> getAllHeldOrders(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null && !restaurantId.isEmpty()) {
+            return ResponseEntity.ok(heldOrderRepository.findAllByRestaurantId(restaurantId));
+        }
         return ResponseEntity.ok(heldOrderRepository.findAll());
     }
 
@@ -49,13 +53,17 @@ public class HeldOrderController {
      * POST /api/held-orders
      */
     @PostMapping("/held-orders")
-    public ResponseEntity<?> createHeldOrder(@RequestBody HeldOrder heldOrder) {
+    public ResponseEntity<?> createHeldOrder(@RequestBody HeldOrder heldOrder,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             if (heldOrder.getId() == null || heldOrder.getId().isEmpty()) {
-                heldOrder.setId(String.valueOf(System.currentTimeMillis()));
+                heldOrder.setId(UUID.randomUUID().toString());
             }
             if (heldOrder.getCreatedAt() == null) {
                 heldOrder.setCreatedAt(Instant.now().toString());
+            }
+            if (restaurantId != null) {
+                heldOrder.setRestaurantId(restaurantId);
             }
 
             HeldOrder saved = heldOrderRepository.save(heldOrder);

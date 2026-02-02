@@ -28,7 +28,8 @@ public class AuthService {
         user.setLastName(request.getLastName());
         user.setEmail(request.getEmail());
         user.setContact(request.getContact());
-        user.setRole(request.getRole() != null ? request.getRole() : "staff"); // Default to staff
+        user.setRole(request.getRole() != null ? request.getRole() : "STAFF");
+        user.setRestaurantId(request.getRestaurantId());
 
         return userRepository.save(user);
     }

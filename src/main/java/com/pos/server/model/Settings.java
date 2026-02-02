@@ -26,4 +26,5 @@ public class Settings {
 
     private boolean skipCustomerDetails;
     private boolean notifications;
+    private String restaurantId;
 }

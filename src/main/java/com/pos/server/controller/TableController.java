@@ -27,8 +27,9 @@ public class TableController {
     private TableService tableService;
 
     @GetMapping("/tables")
-    public ResponseEntity<List<RestaurantTable>> getAllTables() {
-        return ResponseEntity.ok(tableService.getAllTables());
+    public ResponseEntity<List<RestaurantTable>> getAllTables(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return ResponseEntity.ok(tableService.getAllTables(restaurantId));
     }
 
     @GetMapping("/tables/area/{area}")

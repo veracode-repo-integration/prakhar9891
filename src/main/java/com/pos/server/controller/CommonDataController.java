@@ -19,12 +19,16 @@ public class CommonDataController {
 
     // Customers
     @GetMapping("/customers")
-    public List<Customer> getCustomers() {
-        return dataService.getAllCustomers();
+    public List<Customer> getCustomers(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return dataService.getAllCustomers(restaurantId);
     }
 
     @PostMapping("/customers")
-    public ResponseEntity<?> saveCustomer(@RequestBody Customer customer) {
+    public ResponseEntity<?> saveCustomer(@RequestBody Customer customer,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            customer.setRestaurantId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "customer", dataService.saveCustomer(customer)));
     }
 
@@ -35,19 +39,25 @@ public class CommonDataController {
     }
 
     @PutMapping("/customers/{id}")
-    public ResponseEntity<?> updateCustomer(@PathVariable String id, @RequestBody Customer customer) {
+    public ResponseEntity<?> updateCustomer(@PathVariable String id, @RequestBody Customer customer,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         customer.setId(id);
+        if (restaurantId != null)
+            customer.setRestaurantId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "customer", dataService.saveCustomer(customer)));
     }
 
     // Expenses
     @GetMapping("/expenses")
-    public List<Expense> getExpenses() {
-        return dataService.getAllExpenses();
+    public List<Expense> getExpenses(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return dataService.getAllExpenses(restaurantId);
     }
 
     @PostMapping("/expenses")
-    public ResponseEntity<?> saveExpense(@RequestBody Expense expense) {
+    public ResponseEntity<?> saveExpense(@RequestBody Expense expense,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            expense.setRestaurantId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "expense", dataService.saveExpense(expense)));
     }
 
@@ -59,23 +69,28 @@ public class CommonDataController {
 
     // Settings
     @GetMapping("/settings")
-    public Settings getSettings() {
-        return dataService.getSettings();
+    public Settings getSettings(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return dataService.getSettings(restaurantId);
     }
 
     @PutMapping("/settings")
-    public ResponseEntity<?> updateSettings(@RequestBody Settings settings) {
-        return ResponseEntity.ok(Map.of("ok", true, "settings", dataService.updateSettings(settings)));
+    public ResponseEntity<?> updateSettings(@RequestBody Settings settings,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return ResponseEntity.ok(Map.of("ok", true, "settings", dataService.updateSettings(settings, restaurantId)));
     }
 
     // Credit Notes
     @GetMapping("/credit-notes")
-    public List<CreditNote> getCreditNotes() {
-        return dataService.getAllCreditNotes();
+    public List<CreditNote> getCreditNotes(
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return dataService.getAllCreditNotes(restaurantId);
     }
 
     @PostMapping("/credit-notes")
-    public ResponseEntity<?> saveCreditNote(@RequestBody CreditNote note) {
+    public ResponseEntity<?> saveCreditNote(@RequestBody CreditNote note,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            note.setRestaurantId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "note", dataService.saveCreditNote(note)));
     }
 
@@ -86,20 +101,25 @@ public class CommonDataController {
 
     // Credit Transactions (Ledger)
     @GetMapping("/credit-transactions")
-    public List<CreditTransaction> getCreditTransactions(@RequestParam(required = false) String mobile) {
+    public List<CreditTransaction> getCreditTransactions(@RequestParam(required = false) String mobile,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         if (mobile != null)
-            return dataService.getTransactionsByMobile(mobile);
-        return dataService.getAllCreditTransactions();
+            return dataService.getTransactionsByMobile(mobile, restaurantId);
+        return dataService.getAllCreditTransactions(restaurantId);
     }
 
     @PostMapping("/credit-transactions")
-    public ResponseEntity<?> saveCreditTransaction(@RequestBody CreditTransaction tx) {
+    public ResponseEntity<?> saveCreditTransaction(@RequestBody CreditTransaction tx,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            tx.setRestaurantId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "transaction", dataService.saveCreditTransaction(tx)));
     }
 
     @DeleteMapping("/credit-transactions/mobile/{mobile}")
-    public ResponseEntity<?> deleteCreditTransactions(@PathVariable String mobile) {
-        dataService.deleteTransactionsByMobile(mobile);
+    public ResponseEntity<?> deleteCreditTransactions(@PathVariable String mobile,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        dataService.deleteTransactionsByMobile(mobile, restaurantId);
         return ResponseEntity.ok(Map.of("ok", true));
     }
 }

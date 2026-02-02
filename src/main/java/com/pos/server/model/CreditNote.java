@@ -31,4 +31,6 @@ public class CreditNote {
 
     // Status
     private boolean isUsed = false;
+
+    private String restaurantId;
 }

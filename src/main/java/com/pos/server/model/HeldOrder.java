@@ -21,4 +21,6 @@ public class HeldOrder {
 
     @Column(nullable = false)
     private String createdAt; // ISO string
+
+    private String restaurantId;
 }

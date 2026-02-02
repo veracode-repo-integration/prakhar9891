@@ -24,4 +24,5 @@ public class CheckoutRequest {
     private double payLaterAmount;
     private int pointsEarned;
     private String kitchenStatus; // 'pending', 'ready'
+    private String restaurantId;
 }

@@ -30,6 +30,8 @@ public class Expense {
     // Timestamp
     private String createdAt;
 
+    private String restaurantId;
+
     @PrePersist
     public void prePersist() {
         if (this.title == null) {

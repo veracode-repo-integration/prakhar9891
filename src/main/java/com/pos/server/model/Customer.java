@@ -31,4 +31,6 @@ public class Customer {
 
     // Timestamp
     private String joinedAt; // ISO string
+
+    private String restaurantId;
 }

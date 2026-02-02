@@ -18,13 +18,16 @@ public class ProductController {
     private ProductService productService;
 
     @GetMapping
-    public List<Product> getProducts() {
-        return productService.getAllProducts();
+    public List<Product> getProducts(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return productService.getAllProducts(restaurantId);
     }
 
     @PostMapping
     // @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Product> saveProduct(@RequestBody Product product) {
+    public ResponseEntity<Product> saveProduct(@RequestBody Product product,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            product.setRestaurantId(restaurantId);
         Product saved = productService.saveProduct(product);
         return ResponseEntity.ok(saved);
     }
@@ -38,7 +41,10 @@ public class ProductController {
 
     @PutMapping("/{id}")
     // @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateProduct(@PathVariable String id, @RequestBody Product updates) {
+    public ResponseEntity<?> updateProduct(@PathVariable String id, @RequestBody Product updates,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null)
+            updates.setRestaurantId(restaurantId);
         Product updated = productService.updateProduct(id, updates);
         if (updated != null) {
             return ResponseEntity.ok(Map.of("ok", true, "product", updated));
