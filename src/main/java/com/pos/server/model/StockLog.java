@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "stock_logs")
+@Table(name = "pos_stock_logs")
 public class StockLog {
     @Id
     private String id;
@@ -28,5 +28,6 @@ public class StockLog {
     @Column(nullable = false)
     private String createdAt; // ISO string
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

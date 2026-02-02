@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "credit_transactions")
+@Table(name = "pos_credit_transactions")
 public class CreditTransaction {
     @Id
     private String id;
@@ -20,5 +20,6 @@ public class CreditTransaction {
     private String orderId; // Linked order ID if type is 'order' or 'refund'
     private String note;
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

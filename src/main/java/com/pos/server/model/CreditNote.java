@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "credit_notes")
+@Table(name = "pos_credit_notes")
 public class CreditNote {
     @Id
     private String id;
@@ -32,5 +32,6 @@ public class CreditNote {
     // Status
     private boolean isUsed = false;
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "expenses")
+@Table(name = "pos_expenses")
 public class Expense {
     @Id
     private String id;
@@ -30,6 +30,7 @@ public class Expense {
     // Timestamp
     private String createdAt;
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 
     @PrePersist
