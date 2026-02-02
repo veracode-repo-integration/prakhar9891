@@ -30,10 +30,10 @@ public class StockLogController {
     @GetMapping("/stock-logs")
     public ResponseEntity<List<StockLog>> getAllStockLogs(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        if (restaurantId != null && !restaurantId.isEmpty()) {
-            return ResponseEntity.ok(stockLogRepository.findAllByRestaurantId(restaurantId));
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return ResponseEntity.ok(new java.util.ArrayList<>());
         }
-        return ResponseEntity.ok(stockLogRepository.findAll());
+        return ResponseEntity.ok(stockLogRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim()));
     }
 
     /**
@@ -41,7 +41,12 @@ public class StockLogController {
      * GET /api/stock-logs/product/{productId}
      */
     @GetMapping("/stock-logs/product/{productId}")
-    public ResponseEntity<List<StockLog>> getStockLogsByProduct(@PathVariable String productId) {
+    public ResponseEntity<List<StockLog>> getStockLogsByProduct(@PathVariable String productId,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            return ResponseEntity.ok(stockLogRepository.findByProductIdAndRestaurantId(productId,
+                    restaurantId.toLowerCase().trim()));
+        }
         return ResponseEntity.ok(stockLogRepository.findByProductId(productId));
     }
 

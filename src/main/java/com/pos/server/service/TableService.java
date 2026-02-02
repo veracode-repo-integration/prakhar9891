@@ -22,8 +22,8 @@ public class TableService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<RestaurantTable> getAllTables(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty()) {
-            return tableRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return new java.util.ArrayList<>();
         }
         return tableRepository.findAllByRestaurantId(restaurantId);
     }
@@ -49,8 +49,12 @@ public class TableService {
     }
 
     @Transactional
-    public Optional<RestaurantTable> updateTable(String id, Map<String, Object> updates) {
-        return tableRepository.findById(id).map(table -> {
+    public Optional<RestaurantTable> updateTable(String id, Map<String, Object> updates, String restaurantId) {
+        Optional<RestaurantTable> tableOpt = (restaurantId == null || restaurantId.trim().isEmpty())
+                ? tableRepository.findById(id)
+                : tableRepository.findByIdAndRestaurantId(id, restaurantId);
+
+        return tableOpt.map(table -> {
             try {
                 if (updates.containsKey("name"))
                     table.setName((String) updates.get("name"));
@@ -98,8 +102,12 @@ public class TableService {
     }
 
     @Transactional
-    public Optional<RestaurantTable> updateTableStatus(String id, String status) {
-        return tableRepository.findById(id).map(table -> {
+    public Optional<RestaurantTable> updateTableStatus(String id, String status, String restaurantId) {
+        Optional<RestaurantTable> tableOpt = (restaurantId == null || restaurantId.trim().isEmpty())
+                ? tableRepository.findById(id)
+                : tableRepository.findByIdAndRestaurantId(id, restaurantId);
+
+        return tableOpt.map(table -> {
             table.setStatus(status);
             if ("available".equals(status)) {
                 table.setCurrentOrder(null);

@@ -47,7 +47,7 @@ public class TableController {
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             if (restaurantId != null)
-                table.setRestaurantId(restaurantId);
+                table.setRestaurantId(restaurantId.toLowerCase().trim());
             RestaurantTable saved = tableService.createTable(table);
             return ResponseEntity.ok(Map.of("ok", true, "table", saved));
         } catch (Exception e) {
@@ -56,19 +56,21 @@ public class TableController {
     }
 
     @PutMapping("/tables/{id}")
-    public ResponseEntity<?> updateTable(@PathVariable String id, @RequestBody Map<String, Object> updates) {
-        return tableService.updateTable(id, updates)
+    public ResponseEntity<?> updateTable(@PathVariable String id, @RequestBody Map<String, Object> updates,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        return tableService.updateTable(id, updates, restaurantId)
                 .map(table -> ResponseEntity.ok(Map.of("ok", true, "table", table)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/tables/{id}/status")
-    public ResponseEntity<?> updateTableStatus(@PathVariable String id, @RequestBody Map<String, Object> statusUpdate) {
+    public ResponseEntity<?> updateTableStatus(@PathVariable String id, @RequestBody Map<String, Object> statusUpdate,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         String status = (String) statusUpdate.get("status");
         if (status == null) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Status is required"));
         }
-        return tableService.updateTableStatus(id, status)
+        return tableService.updateTableStatus(id, status, restaurantId)
                 .map(table -> ResponseEntity.ok(Map.of("ok", true, "table", table)))
                 .orElse(ResponseEntity.notFound().build());
     }

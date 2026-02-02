@@ -27,7 +27,7 @@ public class ProductController {
     public ResponseEntity<Product> saveProduct(@RequestBody Product product,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         if (restaurantId != null)
-            product.setRestaurantId(restaurantId);
+            product.setRestaurantId(restaurantId.toLowerCase().trim());
         Product saved = productService.saveProduct(product);
         return ResponseEntity.ok(saved);
     }

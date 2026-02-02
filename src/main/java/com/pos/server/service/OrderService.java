@@ -40,8 +40,9 @@ public class OrderService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return orderRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
         return orderRepository.findAllByRestaurantId(restaurantId);
     }
 
@@ -77,8 +78,9 @@ public class OrderService {
             item.setOrder(order);
             items.add(item);
 
-            // Stock Reduction
-            Optional<Product> pOpt = productRepository.findById(reqItem.getId());
+            // 1.1 Scoped Stock Reduction
+            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getId(),
+                    request.getRestaurantId());
             if (pOpt.isPresent()) {
                 Product p = pOpt.get();
                 p.setStock(Math.max(0, p.getStock() - reqItem.getQty()));
@@ -220,8 +222,11 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateOrder(String id, Order updates) {
-        Optional<Order> orderOpt = orderRepository.findById(id);
+    public Order updateOrder(String id, Order updates, String restaurantId) {
+        Optional<Order> orderOpt = (restaurantId == null || restaurantId.trim().isEmpty())
+                ? orderRepository.findById(id)
+                : orderRepository.findByIdAndRestaurantId(id, restaurantId);
+
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
             if (updates.getStatus() != null)

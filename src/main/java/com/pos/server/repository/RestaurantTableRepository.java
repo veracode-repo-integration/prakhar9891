@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for Restaurant Table management
@@ -16,4 +17,6 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
     List<RestaurantTable> findByStatus(String status);
 
     List<RestaurantTable> findAllByRestaurantId(String restaurantId);
+
+    Optional<RestaurantTable> findByIdAndRestaurantId(String id, String restaurantId);
 }

@@ -31,7 +31,7 @@ public class OrderController {
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             if (restaurantId != null)
-                request.setRestaurantId(restaurantId);
+                request.setRestaurantId(restaurantId.toLowerCase().trim());
             Order saved = orderService.processCheckout(request);
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
         } catch (IllegalArgumentException e) {
@@ -43,12 +43,13 @@ public class OrderController {
     }
 
     @PutMapping("/pos-orders/{id}")
-    public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates) {
-        Order updated = orderService.updateOrder(id, updates);
+    public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        Order updated = orderService.updateOrder(id, updates, restaurantId);
         if (updated != null) {
             return ResponseEntity.ok(Map.of("ok", true, "order", updated));
         }
-        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found or access denied"));
     }
 
 }

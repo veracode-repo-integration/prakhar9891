@@ -23,8 +23,8 @@ public class CommonDataService {
 
     // Customers
     public List<Customer> getAllCustomers(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return customerRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return new java.util.ArrayList<>();
         return customerRepository.findAllByRestaurantId(restaurantId);
     }
 
@@ -40,8 +40,8 @@ public class CommonDataService {
 
     // Expenses
     public List<Expense> getAllExpenses(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return expenseRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return new java.util.ArrayList<>();
         return expenseRepository.findAllByRestaurantId(restaurantId);
     }
 
@@ -57,8 +57,8 @@ public class CommonDataService {
 
     // Settings
     public Settings getSettings(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty()) {
-            return settingsRepository.findById("default").orElse(new Settings());
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return new Settings(); // Return empty instead of default for security
         }
         return settingsRepository.findByRestaurantId(restaurantId).orElseGet(() -> {
             Settings s = new Settings();
@@ -69,20 +69,21 @@ public class CommonDataService {
     }
 
     public Settings updateSettings(Settings s, String restaurantId) {
-        if (restaurantId != null && !restaurantId.isEmpty()) {
-            s.setRestaurantId(restaurantId);
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            String rid = restaurantId.toLowerCase().trim();
+            s.setRestaurantId(rid);
             // Ensure we update the existing one for this restaurant if it exists
-            settingsRepository.findByRestaurantId(restaurantId).ifPresent(existing -> s.setId(existing.getId()));
+            settingsRepository.findByRestaurantId(rid).ifPresent(existing -> s.setId(existing.getId()));
         } else {
-            s.setId("default");
+            throw new RuntimeException("Restaurant ID required for settings update");
         }
         return settingsRepository.save(s);
     }
 
     // Credit Notes
     public List<CreditNote> getAllCreditNotes(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return creditNoteRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return new java.util.ArrayList<>();
         return creditNoteRepository.findAllByRestaurantId(restaurantId);
     }
 
@@ -119,14 +120,14 @@ public class CommonDataService {
 
     // Credit Ledger (Transactions)
     public List<CreditTransaction> getAllCreditTransactions(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return creditTransactionRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return new java.util.ArrayList<>();
         return creditTransactionRepository.findAllByRestaurantId(restaurantId);
     }
 
     public List<CreditTransaction> getTransactionsByMobile(String mobile, String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return creditTransactionRepository.findByMobile(mobile);
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return new java.util.ArrayList<>();
         return creditTransactionRepository.findByMobileAndRestaurantId(mobile, restaurantId);
     }
 
@@ -137,12 +138,9 @@ public class CommonDataService {
     }
 
     public void deleteTransactionsByMobile(String mobile, String restaurantId) {
-        List<CreditTransaction> txs;
-        if (restaurantId == null || restaurantId.isEmpty()) {
-            txs = creditTransactionRepository.findByMobile(mobile);
-        } else {
-            txs = creditTransactionRepository.findByMobileAndRestaurantId(mobile, restaurantId);
-        }
+        if (restaurantId == null || restaurantId.trim().isEmpty())
+            return;
+        List<CreditTransaction> txs = creditTransactionRepository.findByMobileAndRestaurantId(mobile, restaurantId);
         creditTransactionRepository.deleteAll(txs);
     }
 }

@@ -18,8 +18,8 @@ public class ProductService {
     private GCSService gcsService;
 
     public List<Product> getAllProducts(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty()) {
-            return productRepository.findAll();
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return new java.util.ArrayList<>();
         }
         return productRepository.findAllByRestaurantId(restaurantId);
     }

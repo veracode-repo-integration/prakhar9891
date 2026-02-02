@@ -29,7 +29,7 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setContact(request.getContact());
         user.setRole(request.getRole() != null ? request.getRole() : "STAFF");
-        user.setRestaurantId(request.getRestaurantId());
+        user.setRestaurantId(request.getRestaurantId() != null ? request.getRestaurantId().toLowerCase().trim() : null);
 
         return userRepository.save(user);
     }
