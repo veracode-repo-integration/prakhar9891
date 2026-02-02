@@ -84,7 +84,8 @@ public class AuthController {
                     (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
                     user.getEmail(),
                     user.getContact(),
-                    user.getRole()));
+                    user.getRole(),
+                    user.getRestaurantId()));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Unauthorized"));
         }

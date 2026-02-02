@@ -43,8 +43,11 @@ public class TableController {
     }
 
     @PostMapping("/tables")
-    public ResponseEntity<?> createTable(@RequestBody RestaurantTable table) {
+    public ResponseEntity<?> createTable(@RequestBody RestaurantTable table,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            if (restaurantId != null)
+                table.setRestaurantId(restaurantId);
             RestaurantTable saved = tableService.createTable(table);
             return ResponseEntity.ok(Map.of("ok", true, "table", saved));
         } catch (Exception e) {
