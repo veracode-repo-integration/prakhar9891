@@ -114,5 +114,6 @@ public class Order {
     @Column(name = "refunded_items_json", columnDefinition = "TEXT")
     private String refundedItemsJson; // Keep as JSON for audit or normalize to Refund entity if needed
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

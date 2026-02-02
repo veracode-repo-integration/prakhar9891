@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "settings")
+@Table(name = "pos_settings")
 public class Settings {
     @Id
     private String id = "default"; // Singleton
@@ -26,5 +26,7 @@ public class Settings {
 
     private boolean skipCustomerDetails;
     private boolean notifications;
+
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

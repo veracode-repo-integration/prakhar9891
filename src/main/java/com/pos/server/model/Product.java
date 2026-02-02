@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "products")
+@Table(name = "pos_products")
 public class Product {
     @Id
     private String id;
@@ -20,5 +20,6 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String composition; // JSON string or logic to be handled
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

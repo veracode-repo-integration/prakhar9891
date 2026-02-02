@@ -9,7 +9,7 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "customers")
+@Table(name = "pos_customers")
 public class Customer {
     @Id
     private String id;
@@ -32,5 +32,6 @@ public class Customer {
     // Timestamp
     private String joinedAt; // ISO string
 
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }

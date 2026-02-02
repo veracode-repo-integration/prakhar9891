@@ -28,5 +28,7 @@ public class RestaurantTable {
     private int guestCount = 0;
     private Long sessionStart;
     private String kitchenStatus;
+
+    @Column(name = "restaurant_id")
     private String restaurantId;
 }
