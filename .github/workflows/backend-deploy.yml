@@ -4,6 +4,10 @@ on:
   push:
     branches: [ main ]
 
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: true
+
 env:
   PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
