@@ -68,7 +68,7 @@ public class Order {
 
     // User Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", referencedColumnName = "db_id")
     private User creator;
 
     @Column(name = "terminal_user")
