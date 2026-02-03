@@ -87,7 +87,7 @@ public class OrderService {
         for (OrderItem reqItem : request.getItems()) {
             OrderItem item = new OrderItem();
             item.setItemId(UUID.randomUUID().toString());
-            item.setProductId(reqItem.getId()); // Product ID (reqItem still has .id from JSON)
+            item.setProductId(reqItem.getProductId()); // Product ID (Matches frontend 'id')
             item.setName(reqItem.getName());
             item.setPrice(reqItem.getPrice());
             item.setQty(reqItem.getQty());
@@ -96,7 +96,7 @@ public class OrderService {
             items.add(item);
 
             // 1.1 Scoped Stock Reduction & Logging
-            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getId(),
+            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(),
                     rid);
             if (pOpt.isPresent()) {
                 Product p = pOpt.get();
