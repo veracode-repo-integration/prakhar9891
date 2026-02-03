@@ -63,12 +63,12 @@ public class Order {
 
     // Customer Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id", referencedColumnName = "id")
+    @JoinColumn(name = "customer_id")
     private Customer customer;
 
     // User Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", referencedColumnName = "db_id")
+    @JoinColumn(name = "user_id")
     private User creator;
 
     @Column(name = "terminal_user")

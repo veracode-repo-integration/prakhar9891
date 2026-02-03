@@ -122,13 +122,15 @@ public class OrderService {
         // 2. Map Payment & Customer (Normalize)
         if (request.getPaymentInfo() != null) {
             Map<String, Object> payInfo = request.getPaymentInfo();
+            log.info("Processing payments for order: {} with method: {}", order.getId(), payInfo.get("method"));
             order.setMethod((String) payInfo.get("method"));
             order.setNote((String) payInfo.get("note"));
 
             // Handle Payments List
             List<PaymentDetail> payments = new ArrayList<>();
             Object splitPayments = payInfo.get("payments");
-            if (splitPayments instanceof List) {
+            if (splitPayments instanceof List && !((List<?>) splitPayments).isEmpty()) {
+                log.info("Detected split payments for order: {}", order.getId());
                 for (Map<String, Object> p : (List<Map<String, Object>>) splitPayments) {
                     PaymentDetail pd = new PaymentDetail();
                     pd.setMethod((String) p.get("method"));
@@ -138,7 +140,7 @@ public class OrderService {
                     payments.add(pd);
                 }
             } else {
-                // Single payment
+                log.info("Detected single payment for order: {}", order.getId());
                 PaymentDetail pd = new PaymentDetail();
                 pd.setMethod((String) payInfo.get("method"));
                 pd.setAmount(request.getTotal());
@@ -148,26 +150,30 @@ public class OrderService {
             order.setPayments(payments);
 
             // Handle Customer Linkage (Create or Update)
-            if (payInfo.containsKey("customer")) {
+            if (payInfo.containsKey("customer") && payInfo.get("customer") != null) {
                 Map<String, Object> custMap = (Map<String, Object>) payInfo.get("customer");
                 String mobile = (String) custMap.get("mobile");
                 String name = (String) custMap.get("name");
 
-                if (mobile != null && !mobile.isEmpty()) {
-                    Customer customer = customerRepository.findByMobileAndRestaurantId(mobile,
-                            rid).orElse(null);
+                if (mobile != null && !mobile.trim().isEmpty()) {
+                    String normMobile = mobile.trim();
+                    log.info("Linking customer with mobile: {} to order: {}", normMobile, order.getId());
+                    Customer customer = customerRepository.findByMobileAndRestaurantId(normMobile, rid).orElse(null);
 
                     if (customer != null) {
-                        if (name != null && !name.isEmpty()) {
-                            customer.setName(name);
+                        log.info("Found existing customer ID: {} for mobile: {}", customer.getId(), normMobile);
+                        if (name != null && !name.trim().isEmpty()) {
+                            customer.setName(name.trim());
                         }
+                        customer.setRestaurantId(rid);
                         customer = customerRepository.saveAndFlush(customer);
                     } else {
+                        log.info("Creating new customer profile for mobile: {}", normMobile);
                         customer = new Customer();
                         customer.setId(UUID.randomUUID().toString());
-                        customer.setMobile(mobile);
-                        customer.setName(name != null ? name : "Walk-in Customer");
-                        customer.setJoinedAt(new java.util.Date().toString());
+                        customer.setMobile(normMobile);
+                        customer.setName((name != null && !name.trim().isEmpty()) ? name.trim() : "Walk-in Customer");
+                        customer.setJoinedAt(java.time.Instant.now().toString());
                         customer.setRestaurantId(rid);
                         customer = customerRepository.saveAndFlush(customer);
                     }
@@ -179,8 +185,13 @@ public class OrderService {
         // 3. User Linkage
         if (username != null) {
             order.setUser(username);
+            log.info("Linking creator user: {} to order: {}", username, order.getId());
             Optional<User> uOpt = userRepository.findByUsername(username);
-            uOpt.ifPresent(order::setCreator);
+            if (uOpt.isPresent()) {
+                order.setCreator(uOpt.get());
+            } else {
+                log.warn("Creator user '{}' not found in database for order: {}", username, order.getId());
+            }
         }
 
         // 4. Financials
