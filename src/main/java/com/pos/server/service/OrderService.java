@@ -281,7 +281,7 @@ public class OrderService {
             if (updates.getRefundedItemsJson() != null) {
                 order.setRefundedItemsJson(updates.getRefundedItemsJson());
                 // Handle Stock Restoration if Reusable
-                if (updates.isReusable()) {
+                if (Boolean.TRUE.equals(updates.getReusable())) {
                     order.setReusable(true);
                     try {
                         List<Map<String, Object>> items = mapper.readValue(updates.getRefundedItemsJson(), List.class);

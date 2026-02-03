@@ -122,7 +122,7 @@ public class Order {
     private String refundedItemsJson; // Keep as JSON for audit or normalize to Refund entity if needed
 
     @Column(name = "is_reusable")
-    private boolean reusable = false; // Used for refund logic to restock items
+    private Boolean reusable = false; // Used for refund logic to restock items
 
     @Column(name = "restaurant_id")
     private String restaurantId;
