@@ -63,7 +63,8 @@ public class Order {
 
     // Customer Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id")
+    @JoinColumn(name = "customer_id", foreignKey = @ForeignKey(ConstraintMode.NO_CONSTRAINT))
+    @org.hibernate.annotations.NotFound(action = org.hibernate.annotations.NotFoundAction.IGNORE)
     private Customer customer;
 
     // User Relationship
