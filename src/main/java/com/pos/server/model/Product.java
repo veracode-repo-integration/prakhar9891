@@ -17,7 +17,8 @@ public class Product {
     private String barcode;
 
     // For composite products logic if needed later
-    @Lob
+    // For composite products logic if needed later
+    @Column(columnDefinition = "TEXT")
     private String composition; // JSON string or logic to be handled
 
     @Column(name = "restaurant_id")
