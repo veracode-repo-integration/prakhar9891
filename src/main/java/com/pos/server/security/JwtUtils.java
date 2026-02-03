@@ -15,8 +15,16 @@ public class JwtUtils {
     private long expirationMs;
 
     private Key getSigningKey() {
-        byte[] keyBytes = jwtSecret.getBytes();
-        return Keys.hmacShaKeyFor(keyBytes);
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] keyBytes = digest.digest(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            return Keys.hmacShaKeyFor(keyBytes);
+        } catch (java.security.NoSuchAlgorithmException e) {
+            byte[] keyBytes = new byte[32];
+            byte[] src = jwtSecret.getBytes();
+            System.arraycopy(src, 0, keyBytes, 0, Math.min(src.length, 32));
+            return Keys.hmacShaKeyFor(keyBytes);
+        }
     }
 
     public String generateToken(String username) {
