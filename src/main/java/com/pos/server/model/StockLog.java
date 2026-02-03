@@ -19,10 +19,12 @@ public class StockLog {
 
     private int qtyChange; // Positive or negative
 
-    @Column(nullable = false)
+    @Column(name = "log_type", nullable = false)
     private String type; // 'sale', 'restock', 'correction', 'return'
 
     private String reason;
+
+    @Column(name = "terminal_user")
     private String user;
 
     @Column(nullable = false)

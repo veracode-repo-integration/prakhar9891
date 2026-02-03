@@ -23,8 +23,14 @@ public class OrderController {
 
     @GetMapping("/pos-orders")
     public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return orderService.getAllOrders(rid);
+    }
+
+    private String normalizeId(String id) {
+        if (id == null || id.equalsIgnoreCase("null") || id.equalsIgnoreCase("undefined"))
+            return null;
+        return id.toLowerCase().trim();
     }
 
     @PostMapping("/checkout")

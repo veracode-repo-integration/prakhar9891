@@ -21,14 +21,20 @@ public class CommonDataController {
     @GetMapping("/customers")
     public List<Customer> getCustomers(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return dataService.getAllCustomers(rid);
+    }
+
+    private String normalizeId(String id) {
+        if (id == null || id.equalsIgnoreCase("null") || id.equalsIgnoreCase("undefined"))
+            return null;
+        return id.toLowerCase().trim();
     }
 
     @GetMapping("/customers/mobile/{mobile}")
     public ResponseEntity<?> getCustomerByMobile(@PathVariable String mobile,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return dataService.getCustomerByMobile(mobile, rid)
                 .map(c -> ResponseEntity.ok(Map.of("ok", true, "customer", c)))
                 .orElse(ResponseEntity.ok(Map.of("ok", false, "message", "Customer not found")));
@@ -60,7 +66,7 @@ public class CommonDataController {
     // Expenses
     @GetMapping("/expenses")
     public List<Expense> getExpenses(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return dataService.getAllExpenses(rid);
     }
 
@@ -81,14 +87,14 @@ public class CommonDataController {
     // Settings
     @GetMapping("/settings")
     public Settings getSettings(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return dataService.getSettings(rid);
     }
 
     @PutMapping("/settings")
     public ResponseEntity<?> updateSettings(@RequestBody Settings settings,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return ResponseEntity.ok(Map.of("ok", true, "settings", dataService.updateSettings(settings, rid)));
     }
 
@@ -96,7 +102,7 @@ public class CommonDataController {
     @GetMapping("/credit-notes")
     public List<CreditNote> getCreditNotes(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         return dataService.getAllCreditNotes(rid);
     }
 
@@ -117,7 +123,7 @@ public class CommonDataController {
     @GetMapping("/credit-transactions")
     public List<CreditTransaction> getCreditTransactions(@RequestParam(required = false) String mobile,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         if (mobile != null)
             return dataService.getTransactionsByMobile(mobile, rid);
         return dataService.getAllCreditTransactions(rid);
@@ -134,7 +140,7 @@ public class CommonDataController {
     @DeleteMapping("/credit-transactions/mobile/{mobile}")
     public ResponseEntity<?> deleteCreditTransactions(@PathVariable String mobile,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
+        String rid = normalizeId(restaurantId);
         dataService.deleteTransactionsByMobile(mobile, rid);
         return ResponseEntity.ok(Map.of("ok", true));
     }

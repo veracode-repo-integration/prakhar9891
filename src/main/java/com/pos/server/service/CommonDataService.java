@@ -22,21 +22,30 @@ public class CommonDataService {
     private CreditTransactionRepository creditTransactionRepository;
 
     public java.util.Optional<Customer> getCustomerByMobile(String mobile, String restaurantId) {
-        if (restaurantId == null || restaurantId.trim().isEmpty())
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            System.err.println("[CommonDataService] Customer lookup failed: Restaurant ID is missing");
             return java.util.Optional.empty();
-        return customerRepository.findByMobileAndRestaurantId(mobile, restaurantId.toLowerCase().trim());
+        }
+        String rid = restaurantId.toLowerCase().trim();
+        System.out.println("[CommonDataService] Looking up customer by mobile: " + mobile + " for restaurant: " + rid);
+        return customerRepository.findByMobileAndRestaurantId(mobile, rid);
     }
 
     // Customers
     public List<Customer> getAllCustomers(String restaurantId) {
         if (restaurantId == null || restaurantId.trim().isEmpty())
             return new java.util.ArrayList<>();
-        return customerRepository.findAllByRestaurantId(restaurantId);
+        return customerRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
     }
 
     public Customer saveCustomer(Customer c) {
         if (c.getId() == null)
             c.setId(UUID.randomUUID().toString());
+        if (c.getRestaurantId() != null) {
+            c.setRestaurantId(c.getRestaurantId().toLowerCase().trim());
+        }
+        System.out.println("[CommonDataService] Saving customer: " + c.getName() + " with mobile: " + c.getMobile()
+                + " for restaurant: " + c.getRestaurantId());
         return customerRepository.save(c);
     }
 

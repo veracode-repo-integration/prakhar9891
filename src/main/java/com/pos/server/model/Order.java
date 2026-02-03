@@ -18,7 +18,7 @@ public class Order {
     @Id
     private String id; // UUID or unique readable ID
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String note;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -63,12 +63,12 @@ public class Order {
 
     // Customer Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id")
+    @JoinColumn(name = "customer_id", referencedColumnName = "id")
     private Customer customer;
 
     // User Relationship
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", referencedColumnName = "db_id")
     private User creator;
 
     @Column(name = "terminal_user")
@@ -116,7 +116,8 @@ public class Order {
     @Column(name = "refund_method")
     private String refundMethod;
 
-    @Column(name = "refunded_items_json", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "refunded_items_json")
     private String refundedItemsJson; // Keep as JSON for audit or normalize to Refund entity if needed
 
     @Column(name = "restaurant_id")

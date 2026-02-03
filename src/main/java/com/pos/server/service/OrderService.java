@@ -43,17 +43,20 @@ public class OrderService {
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders(String restaurantId) {
+        log.info("Fetching orders for restaurant: {}", restaurantId);
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new ArrayList<>();
         }
-        return orderRepository.findAllByRestaurantId(restaurantId);
+        return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
     }
 
     @Transactional
     @SuppressWarnings("unchecked")
     public Order processCheckout(CheckoutRequest request) throws Exception {
+        String rid = request.getRestaurantId() != null ? request.getRestaurantId().toLowerCase().trim() : "default";
+
         log.info("Processing normalized checkout for table: {}, type: {}, restaurant: {}", request.getTableId(),
-                request.getOrderType(), request.getRestaurantId());
+                request.getOrderType(), rid);
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Items list cannot be null or empty");
@@ -61,7 +64,7 @@ public class OrderService {
 
         Order order = new Order();
         order.setId(UUID.randomUUID().toString());
-        order.setRestaurantId(request.getRestaurantId());
+        order.setRestaurantId(rid);
 
         order.setCreatedAt(System.currentTimeMillis());
         order.setDate(java.time.Instant.now().toString());
@@ -94,7 +97,7 @@ public class OrderService {
 
             // 1.1 Scoped Stock Reduction & Logging
             Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getId(),
-                    request.getRestaurantId());
+                    rid);
             if (pOpt.isPresent()) {
                 Product p = pOpt.get();
                 int oldStock = p.getStock();
@@ -110,7 +113,7 @@ public class OrderService {
                 logEntry.setReason("Sale: Order #" + order.getId());
                 logEntry.setUser(username != null ? username : "system");
                 logEntry.setCreatedAt(java.time.Instant.now().toString());
-                logEntry.setRestaurantId(request.getRestaurantId());
+                logEntry.setRestaurantId(rid);
                 stockLogRepository.save(logEntry);
             }
         }
@@ -152,7 +155,7 @@ public class OrderService {
 
                 if (mobile != null && !mobile.isEmpty()) {
                     Customer customer = customerRepository.findByMobileAndRestaurantId(mobile,
-                            request.getRestaurantId().toLowerCase().trim()).orElse(null);
+                            rid).orElse(null);
 
                     if (customer != null) {
                         if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
@@ -165,7 +168,7 @@ public class OrderService {
                         customer.setMobile(mobile);
                         customer.setName(name != null ? name : "Walk-in Customer");
                         customer.setJoinedAt(new java.util.Date().toString());
-                        customer.setRestaurantId(request.getRestaurantId());
+                        customer.setRestaurantId(rid);
                         customer = customerRepository.save(customer);
                     }
                     order.setCustomer(customer);

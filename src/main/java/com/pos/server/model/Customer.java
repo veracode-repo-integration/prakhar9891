@@ -23,6 +23,7 @@ public class Customer {
     private String email;
     private String address;
     private String city;
+    @Column(name = "customer_type")
     private String type; // 'VIP', 'Regular', 'New'
 
     // Loyalty & Rewards
