@@ -4,6 +4,8 @@ import javax.persistence.*;
 import lombok.Data;
 import java.util.List;
 import java.util.ArrayList;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 /**
  * Order entity matching frontend Order structure.
@@ -20,6 +22,7 @@ public class Order {
     private String note;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Fetch(FetchMode.SUBSELECT)
     private List<OrderItem> items = new ArrayList<>();
 
     // Pricing
@@ -49,6 +52,7 @@ public class Order {
 
     // Payment Relationship
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @Fetch(FetchMode.SUBSELECT)
     private List<PaymentDetail> payments = new ArrayList<>();
 
     @Column(name = "payment_method")
