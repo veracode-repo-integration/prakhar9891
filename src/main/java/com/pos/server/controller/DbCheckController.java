@@ -35,4 +35,16 @@ public class DbCheckController {
             return Map.of("status", "error", "error", e.getMessage());
         }
     }
+
+    @GetMapping("/fix-db")
+    public Map<String, Object> fixDb() {
+        try {
+            // Drop the legacy constraint referencing 'customers' table
+            String sql = "ALTER TABLE pos_orders DROP CONSTRAINT fk9ia55q1unwb6dqhw6stia7q0d";
+            jdbcTemplate.execute(sql);
+            return Map.of("status", "success", "message", "Constraint dropped successfully");
+        } catch (Exception e) {
+            return Map.of("status", "error", "error", e.getMessage());
+        }
+    }
 }
