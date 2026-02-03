@@ -278,8 +278,44 @@ public class OrderService {
                 order.setRefundedAt(updates.getRefundedAt());
             if (updates.getRefundMethod() != null)
                 order.setRefundMethod(updates.getRefundMethod());
-            if (updates.getRefundedItemsJson() != null)
+            if (updates.getRefundedItemsJson() != null) {
                 order.setRefundedItemsJson(updates.getRefundedItemsJson());
+                // Handle Stock Restoration if Reusable
+                if (updates.isReusable()) {
+                    order.setReusable(true);
+                    try {
+                        List<Map<String, Object>> items = mapper.readValue(updates.getRefundedItemsJson(), List.class);
+                        for (Map<String, Object> item : items) {
+                            String productId = (String) item.get("id");
+                            if (productId == null)
+                                productId = (String) item.get("productId");
+                            if (productId != null) {
+                                int qty = (item.get("qty") != null) ? ((Number) item.get("qty")).intValue() : 0;
+                                Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(productId,
+                                        order.getRestaurantId());
+                                if (pOpt.isPresent()) {
+                                    Product p = pOpt.get();
+                                    p.setStock(p.getStock() + qty);
+                                    productRepository.save(p);
+
+                                    StockLog logEntry = new StockLog();
+                                    logEntry.setId(UUID.randomUUID().toString());
+                                    logEntry.setProductId(p.getId());
+                                    logEntry.setQtyChange(qty);
+                                    logEntry.setType("restock");
+                                    logEntry.setReason("Refund Restock: Order #" + order.getId());
+                                    logEntry.setUser(order.getUser() != null ? order.getUser() : "system");
+                                    logEntry.setCreatedAt(java.time.Instant.now().toString());
+                                    logEntry.setRestaurantId(order.getRestaurantId());
+                                    stockLogRepository.save(logEntry);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to process refund stock restoration for order: {}", id, e);
+                    }
+                }
+            }
 
             return orderRepository.save(order);
         }
