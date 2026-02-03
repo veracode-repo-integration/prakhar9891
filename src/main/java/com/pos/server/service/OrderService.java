@@ -158,10 +158,10 @@ public class OrderService {
                             rid).orElse(null);
 
                     if (customer != null) {
-                        if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
+                        if (name != null && !name.isEmpty()) {
                             customer.setName(name);
-                            customer = customerRepository.saveAndFlush(customer);
                         }
+                        customer = customerRepository.saveAndFlush(customer);
                     } else {
                         customer = new Customer();
                         customer.setId(UUID.randomUUID().toString());
@@ -200,13 +200,11 @@ public class OrderService {
         order.setStatus(
                 request.getStatus() != null ? request.getStatus() : (request.isPayLater() ? "pending" : "completed"));
 
-        Order savedOrder = orderRepository.save(order);
+        Order savedOrder = orderRepository.saveAndFlush(order);
 
         // --- VACATE TABLE IF DINE-IN ---
         if (request.getTableId() != null && !request.getTableId().isEmpty()) {
-            Optional<RestaurantTable> tOpt = (request.getRestaurantId() != null)
-                    ? tableRepository.findByIdAndRestaurantId(request.getTableId(), request.getRestaurantId())
-                    : tableRepository.findById(request.getTableId());
+            Optional<RestaurantTable> tOpt = tableRepository.findByIdAndRestaurantId(request.getTableId(), rid);
 
             tOpt.ifPresent(table -> {
                 table.setStatus("available");
@@ -230,7 +228,7 @@ public class OrderService {
             tx.setDate(System.currentTimeMillis());
             tx.setOrderId(savedOrder.getId());
             tx.setNote("Pay Later Order #" + savedOrder.getId());
-            tx.setRestaurantId(request.getRestaurantId());
+            tx.setRestaurantId(rid);
             creditTransactionRepository.save(tx);
             log.info("Credit transaction recorded for Pay Later order: {}", savedOrder.getId());
         }

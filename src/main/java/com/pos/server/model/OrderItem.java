@@ -29,7 +29,7 @@ public class OrderItem {
     private List<String> modifiers;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", referencedColumnName = "id")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 }

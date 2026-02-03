@@ -18,7 +18,7 @@ public class PaymentDetail {
     private String reference; // Transaction ID or note
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id")
+    @JoinColumn(name = "order_id", referencedColumnName = "id")
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 }
