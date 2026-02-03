@@ -31,6 +31,7 @@ public class SchemaFixer implements CommandLineRunner {
         fixColumn("pos_orders", "note");
         fixColumn("pos_orders", "refunded_items_json");
         fixColumn("pos_products", "composition");
+        fixColumn("pos_order_items", "modifiers_json");
 
         log.info("--- AUTO-SCHEMA REPAIR COMPLETE ---");
     }

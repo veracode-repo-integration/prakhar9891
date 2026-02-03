@@ -23,10 +23,36 @@ public class OrderItem {
     @Column(name = "cart_id")
     private String cartId; // Unique ID for variant/modifier combo
 
-    @ElementCollection
-    @CollectionTable(name = "pos_order_item_modifiers", joinColumns = @JoinColumn(name = "order_item_id", referencedColumnName = "item_id"))
-    @Column(name = "modifier_name")
+    // Simplified modifiers storage to avoid join complexity and LOB issues
+    @Column(name = "modifiers_json", columnDefinition = "TEXT")
+    private String modifiersJson;
+
+    @Transient
     private List<String> modifiers;
+
+    @PostLoad
+    private void loadModifiers() {
+        if (modifiersJson != null && !modifiersJson.isEmpty()) {
+            try {
+                this.modifiers = new com.fasterxml.jackson.databind.ObjectMapper().readValue(modifiersJson,
+                        java.util.List.class);
+            } catch (Exception e) {
+                this.modifiers = new java.util.ArrayList<>();
+            }
+        } else {
+            this.modifiers = new java.util.ArrayList<>();
+        }
+    }
+
+    @PrePersist
+    @PreUpdate
+    private void saveModifiers() {
+        try {
+            this.modifiersJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(modifiers);
+        } catch (Exception e) {
+            this.modifiersJson = "[]";
+        }
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
