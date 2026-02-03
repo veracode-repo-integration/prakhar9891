@@ -40,9 +40,31 @@ public class DbCheckController {
     public Map<String, Object> fixDb() {
         try {
             // Drop the legacy constraint referencing 'customers' table
-            String sql = "ALTER TABLE pos_orders DROP CONSTRAINT fk9ia55q1unwb6dqhw6stia7q0d";
-            jdbcTemplate.execute(sql);
-            return Map.of("status", "success", "message", "Constraint dropped successfully");
+            try {
+                String sql = "ALTER TABLE pos_orders DROP CONSTRAINT fk9ia55q1unwb6dqhw6stia7q0d";
+                jdbcTemplate.execute(sql);
+            } catch (Exception e) {
+                // Ignore if constraint doesn't exist
+            }
+            return Map.of("status", "success", "message", "Constraint dropped (if existed)");
+        } catch (Exception e) {
+            return Map.of("status", "error", "error", e.getMessage());
+        }
+    }
+
+    @GetMapping("/fix-schema")
+    public Map<String, Object> fixSchema() {
+        try {
+            // 1. Drop the OID/LOB columns
+            // We use IF EXISTS to be safe
+            jdbcTemplate.execute("ALTER TABLE pos_orders DROP COLUMN IF EXISTS note");
+            jdbcTemplate.execute("ALTER TABLE pos_orders DROP COLUMN IF EXISTS refunded_items_json");
+
+            // 2. Add them back as TEXT
+            jdbcTemplate.execute("ALTER TABLE pos_orders ADD COLUMN note TEXT");
+            jdbcTemplate.execute("ALTER TABLE pos_orders ADD COLUMN refunded_items_json TEXT");
+
+            return Map.of("status", "success", "message", "Schema converted to TEXT");
         } catch (Exception e) {
             return Map.of("status", "error", "error", e.getMessage());
         }
