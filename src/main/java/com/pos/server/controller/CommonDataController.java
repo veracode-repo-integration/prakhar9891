@@ -84,20 +84,6 @@ public class CommonDataController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
-    // Settings
-    @GetMapping("/settings")
-    public Settings getSettings(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = normalizeId(restaurantId);
-        return dataService.getSettings(rid);
-    }
-
-    @PutMapping("/settings")
-    public ResponseEntity<?> updateSettings(@RequestBody Settings settings,
-            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = normalizeId(restaurantId);
-        return ResponseEntity.ok(Map.of("ok", true, "settings", dataService.updateSettings(settings, rid)));
-    }
-
     // Credit Notes
     @GetMapping("/credit-notes")
     public List<CreditNote> getCreditNotes(

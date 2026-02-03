@@ -39,11 +39,17 @@
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 
-		<!-- ☁️ GOOGLE CLOUD OFFICIAL STARTER (This replaces the manual socket factory) -->
+		<!-- ☁️ GOOGLE CLOUD OFFICIAL STARTER -->
 		<dependency>
 			<groupId>com.google.cloud</groupId>
 			<artifactId>spring-cloud-gcp-starter-sql-postgresql</artifactId>
 			<version>${spring-cloud-gcp.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
