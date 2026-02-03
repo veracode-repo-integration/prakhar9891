@@ -160,7 +160,7 @@ public class OrderService {
                     if (customer != null) {
                         if (name != null && !name.isEmpty() && !name.equals(customer.getName())) {
                             customer.setName(name);
-                            customerRepository.save(customer);
+                            customer = customerRepository.saveAndFlush(customer);
                         }
                     } else {
                         customer = new Customer();
@@ -169,7 +169,7 @@ public class OrderService {
                         customer.setName(name != null ? name : "Walk-in Customer");
                         customer.setJoinedAt(new java.util.Date().toString());
                         customer.setRestaurantId(rid);
-                        customer = customerRepository.save(customer);
+                        customer = customerRepository.saveAndFlush(customer);
                     }
                     order.setCustomer(customer);
                 }
@@ -240,18 +240,26 @@ public class OrderService {
 
     @Transactional
     public Order updateOrder(String id, Order updates, String restaurantId) {
-        Optional<Order> orderOpt = (restaurantId == null || restaurantId.trim().isEmpty())
-                ? orderRepository.findById(id)
-                : orderRepository.findByIdAndRestaurantId(id, restaurantId);
+        // Search by ID first to be resilient to restaurantId drifting
+        Optional<Order> orderOpt = orderRepository.findById(id);
 
         if (orderOpt.isPresent()) {
             Order order = orderOpt.get();
+
+            // Security check: if restaurantId is provided, it must match
+            if (restaurantId != null && order.getRestaurantId() != null
+                    && !order.getRestaurantId().equalsIgnoreCase(restaurantId)) {
+                log.warn("Access denied for order {} update. Req RID: {}, Order RID: {}", id, restaurantId,
+                        order.getRestaurantId());
+                return null;
+            }
+
             if (updates.getStatus() != null)
                 order.setStatus(updates.getStatus());
             if (updates.getKitchenStatus() != null)
                 order.setKitchenStatus(updates.getKitchenStatus());
 
-            // Refund Login
+            // Refund logic
             if (updates.getPartialRefundAmount() > 0)
                 order.setPartialRefundAmount(updates.getPartialRefundAmount());
             if (updates.getRefundedTaxAmount() > 0)
