@@ -18,13 +18,24 @@ public class SchemaFixer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("--- STARTING AUTO-SCHEMA REPAIR ---");
 
-        // 1. Fix Foreign Key Constraint
+        // 1. Fix Foreign Key Constraints
         try {
-            String sql = "ALTER TABLE pos_orders DROP CONSTRAINT fk9ia55q1unwb6dqhw6stia7q0d";
-            jdbcTemplate.execute(sql);
-            log.info("Dropped legacy foreign key constraint.");
+            // Drop potential conflicting legacy constraints
+            String[] constraints = {
+                    "fk9ia55q1unwb6dqhw6stia7q0d", // Old constraint
+                    "fk1itjildvo7y2dnfdnca25tjyv" // New conflicting constraint
+            };
+
+            for (String constraint : constraints) {
+                try {
+                    jdbcTemplate.execute("ALTER TABLE pos_orders DROP CONSTRAINT " + constraint);
+                    log.info("Dropped legacy foreign key constraint: " + constraint);
+                } catch (Exception e) {
+                    // Ignore if not exists
+                }
+            }
         } catch (Exception e) {
-            // Constraint likely already gone
+            // Global safety
         }
 
         // 2. Fix LOB to TEXT columns
