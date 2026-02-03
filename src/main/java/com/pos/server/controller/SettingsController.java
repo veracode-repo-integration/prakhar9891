@@ -11,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/settings")
@@ -51,7 +52,6 @@ public class SettingsController {
         if (restaurantId == null) {
             return ResponseEntity.status(401).body(Map.of("message", "Unauthorized or Restaurant ID missing"));
         }
-
         return settingRepository.findByRestaurantId(restaurantId)
                 .map(setting -> {
                     try {
@@ -70,14 +70,14 @@ public class SettingsController {
                             if (!node.has("shopAddress"))
                                 node.put("shopAddress", legacy.getAddress());
                         }
-                        return ResponseEntity.ok(node);
+                        return (ResponseEntity<?>) ResponseEntity.ok(node);
                     } catch (Exception e) {
-                        return ResponseEntity.internalServerError().body("Error parsing settings");
+                        return (ResponseEntity<?>) ResponseEntity.internalServerError().body("Error parsing settings");
                     }
                 })
                 .orElseGet(() -> {
                     // Fallback to legacy settings model
-                    return ResponseEntity.ok(commonDataService.getSettings(restaurantId));
+                    return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
                 });
     }
 
