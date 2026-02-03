@@ -87,7 +87,7 @@ public class OrderService {
         for (OrderItem reqItem : request.getItems()) {
             OrderItem item = new OrderItem();
             item.setItemId(UUID.randomUUID().toString());
-            item.setId(reqItem.getId()); // Product ID
+            item.setProductId(reqItem.getId()); // Product ID (reqItem still has .id from JSON)
             item.setName(reqItem.getName());
             item.setPrice(reqItem.getPrice());
             item.setQty(reqItem.getQty());
