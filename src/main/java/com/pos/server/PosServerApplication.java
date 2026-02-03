@@ -10,6 +10,8 @@ public class PosServerApplication {
 	}
 
 	public static void main(String[] args) {
+		System.out.println(">>> STARTING SPRING CONTEXT...");
 		SpringApplication.run(PosServerApplication.class, args);
+		System.out.println(">>> SPRING CONTEXT STARTED SUCCESSFULLY.");
 	}
 }
