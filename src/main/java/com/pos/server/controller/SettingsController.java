@@ -26,12 +26,17 @@ public class SettingsController {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private String getCurrentRestaurantId() {
+    @Autowired
+    private com.pos.server.service.CommonDataService commonDataService;
+
+    private String getRestaurantId(String headerId) {
+        if (headerId != null && !headerId.equalsIgnoreCase("null") && !headerId.isEmpty()) {
+            return headerId.toLowerCase().trim();
+        }
         try {
             Authentication auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null)
                 return null;
-
             String username = auth.getName();
             User user = authService.findByUsername(username);
             return user != null ? user.getRestaurantId() : null;
@@ -41,44 +46,81 @@ public class SettingsController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getSettings() {
-        String restaurantId = getCurrentRestaurantId();
+    public ResponseEntity<?> getSettings(@RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {
+        String restaurantId = getRestaurantId(headerId);
         if (restaurantId == null) {
-            return ResponseEntity.status(401).body("Unauthorized or Restaurant ID missing");
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized or Restaurant ID missing"));
         }
 
         return settingRepository.findByRestaurantId(restaurantId)
                 .map(setting -> {
                     try {
-                        return ResponseEntity.ok(objectMapper.readTree(setting.getSettingsJson()));
+                        com.fasterxml.jackson.databind.node.ObjectNode node = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper
+                                .readTree(setting.getSettingsJson());
+
+                        // Merge high-priority legacy fields for consistency
+                        com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
+                        if (legacy != null) {
+                            if (!node.has("merchantName"))
+                                node.put("merchantName", legacy.getMerchantName());
+                            if (!node.has("taxRate"))
+                                node.put("taxRate", legacy.getTaxRate());
+                            if (!node.has("upiId"))
+                                node.put("upiId", legacy.getUpiId());
+                            if (!node.has("shopAddress"))
+                                node.put("shopAddress", legacy.getAddress());
+                        }
+                        return ResponseEntity.ok(node);
                     } catch (Exception e) {
                         return ResponseEntity.internalServerError().body("Error parsing settings");
                     }
                 })
-                .orElse(ResponseEntity.ok(objectMapper.createObjectNode()));
+                .orElseGet(() -> {
+                    // Fallback to legacy settings model
+                    return ResponseEntity.ok(commonDataService.getSettings(restaurantId));
+                });
     }
 
     @PutMapping
-    public ResponseEntity<?> updateSettings(@RequestBody JsonNode settingsNode) {
-        String restaurantId = getCurrentRestaurantId();
+    public ResponseEntity<?> updateSettings(
+            @RequestBody com.fasterxml.jackson.databind.node.ObjectNode settingsNode,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {
+
+        String restaurantId = getRestaurantId(headerId);
         if (restaurantId == null) {
-            return ResponseEntity.status(401).body("Unauthorized or Restaurant ID missing");
+            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
         }
 
         try {
-            String settingsJson = objectMapper.writeValueAsString(settingsNode);
+            // 1. Sync critical fields to legacy 'pos_settings' table
+            com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
+            if (settingsNode.has("merchantName"))
+                legacy.setMerchantName(settingsNode.get("merchantName").asText());
+            if (settingsNode.has("taxRate"))
+                legacy.setTaxRate(settingsNode.get("taxRate").asDouble());
+            if (settingsNode.has("upiId"))
+                legacy.setUpiId(settingsNode.get("upiId").asText());
 
-            Setting setting = settingRepository.findByRestaurantId(restaurantId)
-                    .orElse(new Setting());
+            // Handle both names used in frontend
+            if (settingsNode.has("shopAddress"))
+                legacy.setAddress(settingsNode.get("shopAddress").asText());
+            else if (settingsNode.has("address"))
+                legacy.setAddress(settingsNode.get("address").asText());
 
+            if (settingsNode.has("gstNumber"))
+                legacy.setGstNumber(settingsNode.get("gstNumber").asText());
+
+            commonDataService.updateSettings(legacy, restaurantId);
+
+            // 2. Persist full state to new JSON-based table
+            Setting setting = settingRepository.findByRestaurantId(restaurantId).orElse(new Setting());
             setting.setRestaurantId(restaurantId);
-            setting.setSettingsJson(settingsJson);
-
+            setting.setSettingsJson(objectMapper.writeValueAsString(settingsNode));
             settingRepository.save(setting);
 
-            return ResponseEntity.ok("Settings saved successfully");
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Settings synchronized globally"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error saving settings: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }
