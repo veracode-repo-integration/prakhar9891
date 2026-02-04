@@ -110,6 +110,12 @@ public class SettingsController {
             if (settingsNode.has("gstNumber"))
                 legacy.setGstNumber(settingsNode.get("gstNumber").asText());
 
+            if (settingsNode.has("taxMapping"))
+                legacy.setTaxMapping(settingsNode.get("taxMapping").toString());
+
+            if (settingsNode.has("isTaxInclusive"))
+                legacy.setTaxInclusive(settingsNode.get("isTaxInclusive").asBoolean());
+
             commonDataService.updateSettings(legacy, restaurantId);
 
             // 2. Persist full state to new JSON-based table

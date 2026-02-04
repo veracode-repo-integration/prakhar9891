@@ -2,7 +2,7 @@ name: Backend Deploy to Cloud Run
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "**" ]
 
 concurrency:
   group: deploy-backend

@@ -17,6 +17,7 @@ public class Product {
     private String barcode;
     private double costPrice;
     private double tax;
+    private String taxCategory;
 
     // For composite products logic if needed later
     // For composite products logic if needed later

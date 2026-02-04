@@ -27,6 +27,11 @@ public class Settings {
     private boolean skipCustomerDetails;
     private boolean notifications;
 
+    @Column(columnDefinition = "TEXT")
+    private String taxMapping; // JSON mapping of categories to rates
+
+    private boolean taxInclusive;
+
     @Column(name = "restaurant_id")
     private String restaurantId;
 }

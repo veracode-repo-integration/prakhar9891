@@ -84,6 +84,8 @@ public class ProductService {
                         product.setCostPrice(updates.getCostPrice());
                     if (updates.getTax() >= 0)
                         product.setTax(updates.getTax());
+                    if (updates.getTaxCategory() != null)
+                        product.setTaxCategory(updates.getTaxCategory());
                     return productRepository.save(product);
                 })
                 .orElse(null);
