@@ -80,6 +80,10 @@ public class ProductService {
                         product.setBarcode(updates.getBarcode());
                     if (updates.getComposition() != null)
                         product.setComposition(updates.getComposition());
+                    if (updates.getCostPrice() >= 0)
+                        product.setCostPrice(updates.getCostPrice());
+                    if (updates.getTax() >= 0)
+                        product.setTax(updates.getTax());
                     return productRepository.save(product);
                 })
                 .orElse(null);

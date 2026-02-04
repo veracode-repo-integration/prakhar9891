@@ -15,6 +15,8 @@ public class Product {
     private int stock;
     private String image;
     private String barcode;
+    private double costPrice;
+    private double tax;
 
     // For composite products logic if needed later
     // For composite products logic if needed later
