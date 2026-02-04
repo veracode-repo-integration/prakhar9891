@@ -112,8 +112,19 @@ public class CommonDataService {
 
     public synchronized String getNextInvoiceNumber(String restaurantId) {
         if (restaurantId == null)
-            return "INV-" + UUID.randomUUID().toString().substring(0, 8);
+            return "INV-" + java.time.Year.now().getValue() + "-" + UUID.randomUUID().toString().substring(0, 4);
+
         String rid = restaurantId.toLowerCase().trim();
+
+        // 1. Determine Dynamic Prefix for current year
+        int currentYear = java.time.Year.now().getValue();
+        String targetPrefix = "INV-" + currentYear + "-";
+
+        // 2. Get Settings to check stored prefix
+        Settings settings = getSettings(rid);
+        String storedPrefix = settings.getInvoicePrefix();
+
+        // 3. Get Sequence
         InvoiceSequence seq = invoiceSequenceRepository.findById(rid).orElseGet(() -> {
             InvoiceSequence s = new InvoiceSequence();
             s.setRestaurantId(rid);
@@ -121,14 +132,30 @@ public class CommonDataService {
             return s;
         });
 
+        // 4. Check for Year Change (or initialization)
+        if (storedPrefix == null || !storedPrefix.equals(targetPrefix)) {
+            System.out.println("New Financial Year / Prefix detected for " + rid + ". Resetting sequence. Old: "
+                    + storedPrefix + " New: " + targetPrefix);
+
+            // Update Settings
+            storedPrefix = targetPrefix;
+            settings.setInvoicePrefix(storedPrefix);
+            try {
+                settingsRepository.save(settings);
+            } catch (Exception e) {
+                System.err.println("Failed to update invoice settings: " + e.getMessage());
+            }
+
+            // Reset Sequence
+            seq.setLastValue(0);
+        }
+
+        // 5. Increment and Format
         long nextVal = seq.getLastValue() + 1;
         seq.setLastValue(nextVal);
         invoiceSequenceRepository.save(seq);
 
-        Settings settings = getSettings(rid);
-        String prefix = settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2026-";
-
-        return prefix + String.format("%04d", nextVal);
+        return storedPrefix + String.format("%04d", nextVal);
     }
 
     // Credit Notes
