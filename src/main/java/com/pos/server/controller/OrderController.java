@@ -17,28 +17,24 @@ import java.util.Map;
 public class OrderController {
 
     @Autowired
-    private OrderService orderService;
+    private com.pos.server.service.AuthService authService;
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    @Autowired
+    private com.pos.server.service.OrderService orderService;
 
     @GetMapping("/pos-orders")
     public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = normalizeId(restaurantId);
+        String rid = validateRestaurantAccess(restaurantId);
         return orderService.getAllOrders(rid);
-    }
-
-    private String normalizeId(String id) {
-        if (id == null || id.equalsIgnoreCase("null") || id.equalsIgnoreCase("undefined"))
-            return null;
-        return id.toLowerCase().trim();
     }
 
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
-            if (restaurantId != null)
-                request.setRestaurantId(restaurantId.toLowerCase().trim());
+            String rid = validateRestaurantAccess(restaurantId);
+            request.setRestaurantId(rid);
+
             Order saved = orderService.processCheckout(request);
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
         } catch (IllegalArgumentException e) {
@@ -52,12 +48,45 @@ public class OrderController {
     @PutMapping("/pos-orders/{id}")
     public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = (restaurantId != null) ? restaurantId.toLowerCase().trim() : null;
-        Order updated = orderService.updateOrder(id, updates, rid);
-        if (updated != null) {
-            return ResponseEntity.ok(Map.of("ok", true, "order", updated));
+        try {
+            String rid = validateRestaurantAccess(restaurantId);
+            Order updated = orderService.updateOrder(id, updates, rid);
+            if (updated != null) {
+                return ResponseEntity.ok(Map.of("ok", true, "order", updated));
+            }
+            return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
-        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found or access denied"));
+    }
+
+    private String validateRestaurantAccess(String headerId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            // For public/kiosk access if needed, but for now we require auth as per
+            // SecurityConfig
+            throw new RuntimeException("Unauthorized");
+        }
+
+        String username = auth.getName();
+        com.pos.server.model.User user = authService.findByUsername(username);
+
+        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+            // Admin can access any restaurant if specified, otherwise their own
+            if (headerId != null && !headerId.trim().isEmpty()) {
+                return headerId.toLowerCase().trim();
+            }
+            return user.getRestaurantId() != null ? user.getRestaurantId().toLowerCase().trim() : null;
+        }
+
+        // Non-Admins are STRICTLY bound to their assigned restaurant
+        if (user.getRestaurantId() == null || user.getRestaurantId().isEmpty()) {
+            throw new RuntimeException("User not assigned to any restaurant");
+        }
+
+        return user.getRestaurantId().toLowerCase().trim();
     }
 
 }
