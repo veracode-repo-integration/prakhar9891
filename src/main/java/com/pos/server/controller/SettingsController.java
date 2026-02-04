@@ -55,8 +55,14 @@ public class SettingsController {
         return settingRepository.findByRestaurantId(restaurantId)
                 .map(setting -> {
                     try {
+                        String json = setting.getSettingsJson();
+                        if (json == null || json.trim().isEmpty() || json.equalsIgnoreCase("null")) {
+                            // Fallback to legacy if no valid JSON found
+                            return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
+                        }
+
                         com.fasterxml.jackson.databind.node.ObjectNode node = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper
-                                .readTree(setting.getSettingsJson());
+                                .readTree(json);
 
                         // Merge high-priority legacy fields for consistency
                         com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
@@ -72,7 +78,10 @@ public class SettingsController {
                         }
                         return (ResponseEntity<?>) ResponseEntity.ok(node);
                     } catch (Exception e) {
-                        return (ResponseEntity<?>) ResponseEntity.internalServerError().body("Error parsing settings");
+                        System.err.println(
+                                "[SettingsError] Failed to parse JSON for " + restaurantId + ": " + e.getMessage());
+                        // Fallback to legacy on parsing error to avoid 500
+                        return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
                     }
                 })
                 .orElseGet(() -> {
