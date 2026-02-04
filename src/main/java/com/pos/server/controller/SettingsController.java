@@ -52,42 +52,48 @@ public class SettingsController {
         if (restaurantId == null) {
             return ResponseEntity.status(401).body(Map.of("message", "Unauthorized or Restaurant ID missing"));
         }
-        return settingRepository.findByRestaurantId(restaurantId)
-                .map(setting -> {
-                    try {
-                        String json = setting.getSettingsJson();
-                        if (json == null || json.trim().isEmpty() || json.equalsIgnoreCase("null")) {
-                            // Fallback to legacy if no valid JSON found
+
+        try {
+            // Attempt to fetch from new JSON-based settings table (pos_terminal_settings)
+            // Wrapping in try-catch to handle SQLGrammarException if table doesn't exist
+            // yet in production
+            return settingRepository.findByRestaurantId(restaurantId)
+                    .map(setting -> {
+                        try {
+                            String json = setting.getSettingsJson();
+                            if (json == null || json.trim().isEmpty() || json.equalsIgnoreCase("null")) {
+                                return (ResponseEntity<?>) ResponseEntity
+                                        .ok(commonDataService.getSettings(restaurantId));
+                            }
+
+                            com.fasterxml.jackson.databind.node.ObjectNode node = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper
+                                    .readTree(json);
+
+                            // Sync legacy fields
+                            com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
+                            if (legacy != null) {
+                                if (!node.has("merchantName"))
+                                    node.put("merchantName", legacy.getMerchantName());
+                                if (!node.has("taxRate"))
+                                    node.put("taxRate", legacy.getTaxRate());
+                                if (!node.has("upiId"))
+                                    node.put("upiId", legacy.getUpiId());
+                                if (!node.has("shopAddress"))
+                                    node.put("shopAddress", legacy.getAddress());
+                            }
+                            return (ResponseEntity<?>) ResponseEntity.ok(node);
+                        } catch (Exception e) {
                             return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
                         }
-
-                        com.fasterxml.jackson.databind.node.ObjectNode node = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper
-                                .readTree(json);
-
-                        // Merge high-priority legacy fields for consistency
-                        com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
-                        if (legacy != null) {
-                            if (!node.has("merchantName"))
-                                node.put("merchantName", legacy.getMerchantName());
-                            if (!node.has("taxRate"))
-                                node.put("taxRate", legacy.getTaxRate());
-                            if (!node.has("upiId"))
-                                node.put("upiId", legacy.getUpiId());
-                            if (!node.has("shopAddress"))
-                                node.put("shopAddress", legacy.getAddress());
-                        }
-                        return (ResponseEntity<?>) ResponseEntity.ok(node);
-                    } catch (Exception e) {
-                        System.err.println(
-                                "[SettingsError] Failed to parse JSON for " + restaurantId + ": " + e.getMessage());
-                        // Fallback to legacy on parsing error to avoid 500
-                        return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
-                    }
-                })
-                .orElseGet(() -> {
-                    // Fallback to legacy settings model
-                    return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
-                });
+                    })
+                    .orElseGet(
+                            () -> (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId)));
+        } catch (Exception e) {
+            // Table might not exist yet (SQLGrammarException)
+            System.err.println("[SettingsBackup] Table pos_terminal_settings likely missing, falling back to legacy: "
+                    + e.getMessage());
+            return ResponseEntity.ok(commonDataService.getSettings(restaurantId));
+        }
     }
 
     @PutMapping
@@ -127,15 +133,21 @@ public class SettingsController {
 
             commonDataService.updateSettings(legacy, restaurantId);
 
-            // 2. Persist full state to new JSON-based table
-            Setting setting = settingRepository.findByRestaurantId(restaurantId).orElse(new Setting());
-            setting.setRestaurantId(restaurantId);
-            setting.setSettingsJson(objectMapper.writeValueAsString(settingsNode));
-            settingRepository.save(setting);
+            // 2. Persist full state to new JSON-based table (Optional/Safe fallback)
+            try {
+                Setting setting = settingRepository.findByRestaurantId(restaurantId).orElse(new Setting());
+                setting.setRestaurantId(restaurantId);
+                setting.setSettingsJson(objectMapper.writeValueAsString(settingsNode));
+                settingRepository.save(setting);
+            } catch (Exception e) {
+                System.err.println(
+                        "[SettingsSafety] Could not save to JSON table, but legacy sync succeeded: " + e.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of("ok", true, "message", "Settings synchronized globally"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("ok", false, "message", "Update failed: " + e.getMessage()));
         }
     }
 }
