@@ -23,6 +23,9 @@ public class Product {
     @Column(name = "hsn_code")
     private String hsnCode = "9963"; // Default for restaurant services
 
+    @Column(columnDefinition = "TEXT")
+    private String composition;
+
     @Column(name = "restaurant_id")
     private String restaurantId;
 }

@@ -128,7 +128,7 @@ public class CommonDataService {
         Settings settings = getSettings(rid);
         String prefix = settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2025-";
 
-        return prefix + String.format("%03d", nextVal);
+        return prefix + String.format("%04d", nextVal);
     }
 
     // Credit Notes
