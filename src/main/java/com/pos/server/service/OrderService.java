@@ -41,6 +41,9 @@ public class OrderService {
     @Autowired
     private StockLogRepository stockLogRepository;
 
+    @Autowired
+    private CommonDataService commonDataService;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders(String restaurantId) {
@@ -66,6 +69,7 @@ public class OrderService {
         Order order = new Order();
         order.setId(UUID.randomUUID().toString());
         order.setRestaurantId(rid);
+        order.setInvoiceNumber(commonDataService.getNextInvoiceNumber(rid));
 
         order.setCreatedAt(System.currentTimeMillis());
         order.setDate(java.time.Instant.now().toString());

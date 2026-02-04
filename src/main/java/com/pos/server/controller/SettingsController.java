@@ -74,6 +74,11 @@ public class SettingsController {
             node.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
             node.put("isTaxInclusive", settings.getTaxInclusive() != null ? settings.getTaxInclusive() : false);
 
+            node.put("stateCode", settings.getStateCode() != null ? settings.getStateCode() : "27");
+            node.put("stateName", settings.getStateName() != null ? settings.getStateName() : "Maharashtra");
+            node.put("gstCategory", settings.getGstCategory() != null ? settings.getGstCategory() : "Regular");
+            node.put("invoicePrefix", settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2025-");
+
             if (settings.getTableAreas() != null) {
                 node.put("tableAreas", settings.getTableAreas());
             }
@@ -122,6 +127,15 @@ public class SettingsController {
                 settings.setTaxMapping(settingsNode.get("taxMapping").toString());
             if (settingsNode.has("tableAreas"))
                 settings.setTableAreas(settingsNode.get("tableAreas").asText());
+
+            if (settingsNode.has("stateCode"))
+                settings.setStateCode(settingsNode.get("stateCode").asText());
+            if (settingsNode.has("stateName"))
+                settings.setStateName(settingsNode.get("stateName").asText());
+            if (settingsNode.has("gstCategory"))
+                settings.setGstCategory(settingsNode.get("gstCategory").asText());
+            if (settingsNode.has("invoicePrefix"))
+                settings.setInvoicePrefix(settingsNode.get("invoicePrefix").asText());
 
             settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
             settingsRepository.save(settings);

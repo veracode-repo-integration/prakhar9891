@@ -34,6 +34,18 @@ public class Settings {
     @Column(name = "restaurant_id")
     private String restaurantId;
 
+    @Column(name = "state_code")
+    private String stateCode = "27"; // Default MH
+
+    @Column(name = "state_name")
+    private String stateName = "Maharashtra";
+
+    @Column(name = "gst_category")
+    private String gstCategory = "Regular"; // Regular, Composition, Unregistered
+
+    @Column(name = "invoice_prefix")
+    private String invoicePrefix = "INV-2025-";
+
     @Column(columnDefinition = "TEXT")
     private String rawSettingsJson;
 }

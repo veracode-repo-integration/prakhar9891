@@ -20,6 +20,8 @@ public class CommonDataService {
     private CreditNoteRepository creditNoteRepository;
     @Autowired
     private CreditTransactionRepository creditTransactionRepository;
+    @Autowired
+    private InvoiceSequenceRepository invoiceSequenceRepository;
 
     public java.util.Optional<Customer> getCustomerByMobile(String mobile, String restaurantId) {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
@@ -106,6 +108,27 @@ public class CommonDataService {
         } else {
             throw new RuntimeException("Restaurant ID required for settings update");
         }
+    }
+
+    public synchronized String getNextInvoiceNumber(String restaurantId) {
+        if (restaurantId == null)
+            return "INV-" + UUID.randomUUID().toString().substring(0, 8);
+        String rid = restaurantId.toLowerCase().trim();
+        InvoiceSequence seq = invoiceSequenceRepository.findById(rid).orElseGet(() -> {
+            InvoiceSequence s = new InvoiceSequence();
+            s.setRestaurantId(rid);
+            s.setLastValue(0);
+            return s;
+        });
+
+        long nextVal = seq.getLastValue() + 1;
+        seq.setLastValue(nextVal);
+        invoiceSequenceRepository.save(seq);
+
+        Settings settings = getSettings(rid);
+        String prefix = settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2025-";
+
+        return prefix + String.format("%03d", nextVal);
     }
 
     // Credit Notes
