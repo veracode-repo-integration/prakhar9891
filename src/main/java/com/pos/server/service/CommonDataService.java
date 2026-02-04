@@ -126,7 +126,7 @@ public class CommonDataService {
         invoiceSequenceRepository.save(seq);
 
         Settings settings = getSettings(rid);
-        String prefix = settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2025-";
+        String prefix = settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2026-";
 
         return prefix + String.format("%04d", nextVal);
     }

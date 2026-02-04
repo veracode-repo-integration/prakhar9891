@@ -44,7 +44,7 @@ public class Settings {
     private String gstCategory = "Regular"; // Regular, Composition, Unregistered
 
     @Column(name = "invoice_prefix")
-    private String invoicePrefix = "INV-2025-";
+    private String invoicePrefix = "INV-2026-";
 
     @Column(columnDefinition = "TEXT")
     private String rawSettingsJson;
