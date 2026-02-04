@@ -1,17 +1,19 @@
 package com.pos.server.controller;
 
-import com.pos.server.model.Setting;
+import com.pos.server.model.Settings;
 import com.pos.server.model.User;
-import com.pos.server.repository.SettingRepository;
+import com.pos.server.repository.SettingsRepository;
 import com.pos.server.service.AuthService;
+import com.pos.server.service.CommonDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/settings")
@@ -19,7 +21,7 @@ import java.util.Map;
 public class SettingsController {
 
     @Autowired
-    private SettingRepository settingRepository;
+    private SettingsRepository settingsRepository;
 
     @Autowired
     private AuthService authService;
@@ -28,7 +30,7 @@ public class SettingsController {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private com.pos.server.service.CommonDataService commonDataService;
+    private CommonDataService commonDataService;
 
     private String getRestaurantId(String headerId) {
         if (headerId != null && !headerId.equalsIgnoreCase("null") && !headerId.isEmpty()) {
@@ -53,52 +55,53 @@ public class SettingsController {
             return ResponseEntity.status(401).body(Map.of("message", "Unauthorized or Restaurant ID missing"));
         }
 
+        // Use CommonDataService to get the stable legacy settings
+        Settings settings = commonDataService.getSettings(restaurantId);
+
         try {
-            // Attempt to fetch from new JSON-based settings table (pos_terminal_settings)
-            // Wrapping in try-catch to handle SQLGrammarException if table doesn't exist
-            // yet in production
-            return settingRepository.findByRestaurantId(restaurantId)
-                    .map(setting -> {
-                        try {
-                            String json = setting.getSettingsJson();
-                            if (json == null || json.trim().isEmpty() || json.equalsIgnoreCase("null")) {
-                                return (ResponseEntity<?>) ResponseEntity
-                                        .ok(commonDataService.getSettings(restaurantId));
-                            }
+            ObjectNode node;
+            if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
+                // If we have raw JSON saved, start with that
+                node = (ObjectNode) objectMapper.readTree(settings.getRawSettingsJson());
+            } else {
+                // Create a new node and populate with legacy fields
+                node = objectMapper.createObjectNode();
+            }
 
-                            com.fasterxml.jackson.databind.node.ObjectNode node = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper
-                                    .readTree(json);
+            // Always ensure critical fields from legacy DB are synced into the JSON
+            // response
+            node.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
+            node.put("taxRate", settings.getTaxRate());
+            node.put("upiId", settings.getUpiId() != null ? settings.getUpiId() : "");
+            node.put("shopAddress", settings.getAddress() != null ? settings.getAddress() : "");
+            node.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
+            node.put("isTaxInclusive", settings.isTaxInclusive());
 
-                            // Sync legacy fields
-                            com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
-                            if (legacy != null) {
-                                if (!node.has("merchantName"))
-                                    node.put("merchantName", legacy.getMerchantName());
-                                if (!node.has("taxRate"))
-                                    node.put("taxRate", legacy.getTaxRate());
-                                if (!node.has("upiId"))
-                                    node.put("upiId", legacy.getUpiId());
-                                if (!node.has("shopAddress"))
-                                    node.put("shopAddress", legacy.getAddress());
-                            }
-                            return (ResponseEntity<?>) ResponseEntity.ok(node);
-                        } catch (Exception e) {
-                            return (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId));
-                        }
-                    })
-                    .orElseGet(
-                            () -> (ResponseEntity<?>) ResponseEntity.ok(commonDataService.getSettings(restaurantId)));
+            // Handle tableAreas string -> array/string conversion if needed
+            if (settings.getTableAreas() != null) {
+                node.put("tableAreas", settings.getTableAreas());
+            }
+
+            return ResponseEntity.ok(node);
         } catch (Exception e) {
-            // Table might not exist yet (SQLGrammarException)
-            System.err.println("[SettingsBackup] Table pos_terminal_settings likely missing, falling back to legacy: "
-                    + e.getMessage());
-            return ResponseEntity.ok(commonDataService.getSettings(restaurantId));
+            // Safe fallback if JSON parsing fails
+            ObjectNode fallbackNode = objectMapper.createObjectNode();
+            fallbackNode.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
+            fallbackNode.put("taxRate", settings.getTaxRate());
+            fallbackNode.put("upiId", settings.getUpiId() != null ? settings.getUpiId() : "");
+            fallbackNode.put("shopAddress", settings.getAddress() != null ? settings.getAddress() : "");
+            fallbackNode.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
+            fallbackNode.put("isTaxInclusive", settings.isTaxInclusive());
+            if (settings.getTableAreas() != null) {
+                fallbackNode.put("tableAreas", settings.getTableAreas());
+            }
+            return ResponseEntity.ok(fallbackNode);
         }
     }
 
     @PutMapping
     public ResponseEntity<?> updateSettings(
-            @RequestBody com.fasterxml.jackson.databind.node.ObjectNode settingsNode,
+            @RequestBody ObjectNode settingsNode,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {
 
         String restaurantId = getRestaurantId(headerId);
@@ -107,44 +110,41 @@ public class SettingsController {
         }
 
         try {
-            // 1. Sync critical fields to legacy 'pos_settings' table
-            com.pos.server.model.Settings legacy = commonDataService.getSettings(restaurantId);
+            // 1. Fetch existing legacy settings
+            Settings settings = commonDataService.getSettings(restaurantId);
+
+            // 2. Sync incoming JSON fields to legacy columns for stability
             if (settingsNode.has("merchantName"))
-                legacy.setMerchantName(settingsNode.get("merchantName").asText());
+                settings.setMerchantName(settingsNode.get("merchantName").asText());
             if (settingsNode.has("taxRate"))
-                legacy.setTaxRate(settingsNode.get("taxRate").asDouble());
+                settings.setTaxRate(settingsNode.get("taxRate").asDouble());
             if (settingsNode.has("upiId"))
-                legacy.setUpiId(settingsNode.get("upiId").asText());
-
-            // Handle both names used in frontend
-            if (settingsNode.has("shopAddress"))
-                legacy.setAddress(settingsNode.get("shopAddress").asText());
-            else if (settingsNode.has("address"))
-                legacy.setAddress(settingsNode.get("address").asText());
-
+                settings.setUpiId(settingsNode.get("upiId").asText());
             if (settingsNode.has("gstNumber"))
-                legacy.setGstNumber(settingsNode.get("gstNumber").asText());
+                settings.setGstNumber(settingsNode.get("gstNumber").asText());
 
-            if (settingsNode.has("taxMapping"))
-                legacy.setTaxMapping(settingsNode.get("taxMapping").toString());
+            if (settingsNode.has("shopAddress"))
+                settings.setAddress(settingsNode.get("shopAddress").asText());
+            else if (settingsNode.has("address"))
+                settings.setAddress(settingsNode.get("address").asText());
 
             if (settingsNode.has("isTaxInclusive"))
-                legacy.setTaxInclusive(settingsNode.get("isTaxInclusive").asBoolean());
+                settings.setTaxInclusive(settingsNode.get("isTaxInclusive").asBoolean());
+            if (settingsNode.has("taxInclusive"))
+                settings.setTaxInclusive(settingsNode.get("taxInclusive").asBoolean());
 
-            commonDataService.updateSettings(legacy, restaurantId);
+            if (settingsNode.has("taxMapping"))
+                settings.setTaxMapping(settingsNode.get("taxMapping").toString());
+            if (settingsNode.has("tableAreas"))
+                settings.setTableAreas(settingsNode.get("tableAreas").asText());
 
-            // 2. Persist full state to new JSON-based table (Optional/Safe fallback)
-            try {
-                Setting setting = settingRepository.findByRestaurantId(restaurantId).orElse(new Setting());
-                setting.setRestaurantId(restaurantId);
-                setting.setSettingsJson(objectMapper.writeValueAsString(settingsNode));
-                settingRepository.save(setting);
-            } catch (Exception e) {
-                System.err.println(
-                        "[SettingsSafety] Could not save to JSON table, but legacy sync succeeded: " + e.getMessage());
-            }
+            // 3. Store the WHOLE JSON blob for future proofing
+            settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
 
-            return ResponseEntity.ok(Map.of("ok", true, "message", "Settings synchronized globally"));
+            // 4. Save to the stable repository
+            settingsRepository.save(settings);
+
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Settings saved successfully"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("ok", false, "message", "Update failed: " + e.getMessage()));

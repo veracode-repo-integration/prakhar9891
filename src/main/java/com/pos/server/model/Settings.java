@@ -34,4 +34,7 @@ public class Settings {
 
     @Column(name = "restaurant_id")
     private String restaurantId;
+
+    @Column(columnDefinition = "TEXT")
+    private String rawSettingsJson; // Full JSON blob for future-proofing
 }
