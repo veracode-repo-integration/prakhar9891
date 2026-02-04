@@ -61,41 +61,31 @@ public class SettingsController {
         try {
             ObjectNode node;
             if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
-                // If we have raw JSON saved, start with that
                 node = (ObjectNode) objectMapper.readTree(settings.getRawSettingsJson());
             } else {
-                // Create a new node and populate with legacy fields
                 node = objectMapper.createObjectNode();
             }
 
-            // Always ensure critical fields from legacy DB are synced into the JSON
-            // response
+            // Merge legacy fields with null protection
             node.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
-            node.put("taxRate", settings.getTaxRate());
+            node.put("taxRate", settings.getTaxRate() != null ? settings.getTaxRate() : 0.0);
             node.put("upiId", settings.getUpiId() != null ? settings.getUpiId() : "");
             node.put("shopAddress", settings.getAddress() != null ? settings.getAddress() : "");
             node.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
-            node.put("isTaxInclusive", settings.isTaxInclusive());
+            node.put("isTaxInclusive", settings.getTaxInclusive() != null ? settings.getTaxInclusive() : false);
 
-            // Handle tableAreas string -> array/string conversion if needed
             if (settings.getTableAreas() != null) {
                 node.put("tableAreas", settings.getTableAreas());
             }
 
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            // Safe fallback if JSON parsing fails
-            ObjectNode fallbackNode = objectMapper.createObjectNode();
-            fallbackNode.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
-            fallbackNode.put("taxRate", settings.getTaxRate());
-            fallbackNode.put("upiId", settings.getUpiId() != null ? settings.getUpiId() : "");
-            fallbackNode.put("shopAddress", settings.getAddress() != null ? settings.getAddress() : "");
-            fallbackNode.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
-            fallbackNode.put("isTaxInclusive", settings.isTaxInclusive());
-            if (settings.getTableAreas() != null) {
-                fallbackNode.put("tableAreas", settings.getTableAreas());
-            }
-            return ResponseEntity.ok(fallbackNode);
+            // Ultimate fallback JSON
+            ObjectNode fallback = objectMapper.createObjectNode();
+            fallback.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
+            fallback.put("taxRate", settings.getTaxRate() != null ? settings.getTaxRate() : 0.0);
+            fallback.put("isTaxInclusive", false);
+            return ResponseEntity.ok(fallback);
         }
     }
 
@@ -110,10 +100,8 @@ public class SettingsController {
         }
 
         try {
-            // 1. Fetch existing legacy settings
             Settings settings = commonDataService.getSettings(restaurantId);
 
-            // 2. Sync incoming JSON fields to legacy columns for stability
             if (settingsNode.has("merchantName"))
                 settings.setMerchantName(settingsNode.get("merchantName").asText());
             if (settingsNode.has("taxRate"))
@@ -130,18 +118,12 @@ public class SettingsController {
 
             if (settingsNode.has("isTaxInclusive"))
                 settings.setTaxInclusive(settingsNode.get("isTaxInclusive").asBoolean());
-            if (settingsNode.has("taxInclusive"))
-                settings.setTaxInclusive(settingsNode.get("taxInclusive").asBoolean());
-
             if (settingsNode.has("taxMapping"))
                 settings.setTaxMapping(settingsNode.get("taxMapping").toString());
             if (settingsNode.has("tableAreas"))
                 settings.setTableAreas(settingsNode.get("tableAreas").asText());
 
-            // 3. Store the WHOLE JSON blob for future proofing
             settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
-
-            // 4. Save to the stable repository
             settingsRepository.save(settings);
 
             return ResponseEntity.ok(Map.of("ok", true, "message", "Settings saved successfully"));

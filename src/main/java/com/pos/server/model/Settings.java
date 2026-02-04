@@ -5,36 +5,35 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "pos_settings")
+@Table(name = "pos_terminal_config")
 public class Settings {
     @Id
-    private String id = "default"; // Singleton
+    private String id = "default";
 
-    private double taxRate;
+    private Double taxRate;
     private String upiId;
     private String merchantName;
     private String gstNumber;
     private String address;
     private String footerMessage;
 
-    // Store Location for Geofencing
-    private double latitude;
-    private double longitude;
+    private Double latitude;
+    private Double longitude;
 
     @Column(columnDefinition = "TEXT")
-    private String tableAreas; // Comma-separated or JSON string of area names
+    private String tableAreas;
 
-    private boolean skipCustomerDetails;
-    private boolean notifications;
+    private Boolean skipCustomerDetails;
+    private Boolean notifications;
 
     @Column(columnDefinition = "TEXT")
-    private String taxMapping; // JSON mapping of categories to rates
+    private String taxMapping;
 
-    private boolean taxInclusive;
+    private Boolean taxInclusive;
 
     @Column(name = "restaurant_id")
     private String restaurantId;
 
     @Column(columnDefinition = "TEXT")
-    private String rawSettingsJson; // Full JSON blob for future-proofing
+    private String rawSettingsJson;
 }
