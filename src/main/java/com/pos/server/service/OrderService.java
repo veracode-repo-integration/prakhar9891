@@ -51,7 +51,17 @@ public class OrderService {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new ArrayList<>();
         }
+        // Force Sort by date DESC
         return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
+    }
+
+    public org.springframework.data.domain.Page<Order> getOrdersPaginated(String restaurantId, int page, int size) {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return org.springframework.data.domain.Page.empty();
+        }
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by("date").descending());
+        return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim(), pageable);
     }
 
     @Transactional
