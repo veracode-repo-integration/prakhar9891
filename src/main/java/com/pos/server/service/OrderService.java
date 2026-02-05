@@ -90,7 +90,8 @@ public class OrderService {
         // Fetch settings to check if stock tracking is disabled
         Settings settings = commonDataService.getSettings(rid);
         boolean disableStockTracking = Boolean.TRUE.equals(settings.getDisableStockDecrement());
-        log.info("[OrderService] Checkout for restaurant: {}. Stock Tracking Disabled: {}", rid, disableStockTracking);
+        log.info("[OrderService] Checkout for restaurant: {}. SettingsID: {}. Stock Tracking Disabled: {}",
+                rid, settings.getId(), disableStockTracking);
 
         // 1. Map Items (Normalize Modifiers)
         List<OrderItem> items = new ArrayList<>();
