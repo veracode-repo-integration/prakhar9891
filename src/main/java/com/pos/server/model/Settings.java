@@ -17,8 +17,14 @@ public class Settings {
     private String address;
     private String footerMessage;
 
+    @Column(name = "geo_latitude")
     private Double latitude;
+
+    @Column(name = "geo_longitude")
     private Double longitude;
+
+    @Column(name = "geo_radius_meters")
+    private Integer geofenceRadius = 50; // Default 50 meters
 
     @Column(columnDefinition = "TEXT")
     private String tableAreas;

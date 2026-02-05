@@ -79,6 +79,13 @@ public class SettingsController {
             node.put("gstCategory", settings.getGstCategory() != null ? settings.getGstCategory() : "Regular");
             node.put("invoicePrefix", settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2025-");
 
+            if (settings.getLatitude() != null)
+                node.put("latitude", settings.getLatitude());
+            if (settings.getLongitude() != null)
+                node.put("longitude", settings.getLongitude());
+            if (settings.getGeofenceRadius() != null)
+                node.put("geofenceRadius", settings.getGeofenceRadius());
+
             if (settings.getTableAreas() != null) {
                 node.put("tableAreas", settings.getTableAreas());
             }
@@ -136,6 +143,13 @@ public class SettingsController {
                 settings.setGstCategory(settingsNode.get("gstCategory").asText());
             if (settingsNode.has("invoicePrefix"))
                 settings.setInvoicePrefix(settingsNode.get("invoicePrefix").asText());
+
+            if (settingsNode.has("latitude"))
+                settings.setLatitude(settingsNode.get("latitude").asDouble());
+            if (settingsNode.has("longitude"))
+                settings.setLongitude(settingsNode.get("longitude").asDouble());
+            if (settingsNode.has("geofenceRadius"))
+                settings.setGeofenceRadius(settingsNode.get("geofenceRadius").asInt());
 
             settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
             settingsRepository.save(settings);

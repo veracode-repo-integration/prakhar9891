@@ -29,6 +29,12 @@ public class RestaurantTable {
     private Long sessionStart;
     private String kitchenStatus;
 
+    @Column(name = "customer_name")
+    private String customerName;
+
+    @Column(name = "customer_mobile")
+    private String customerMobile;
+
     @Column(name = "restaurant_id")
     private String restaurantId;
 }

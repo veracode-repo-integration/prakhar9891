@@ -55,13 +55,14 @@ public class DineInController {
             Settings settings = settingsOpt.get();
 
             // Check if Store Location is configured
-            if (settings.getLatitude() != 0.0 || settings.getLongitude() != 0.0) {
+            if (settings.getLatitude() != null && settings.getLongitude() != null) {
                 double distance = LocationUtils.distance(
                         request.getLatitude(), request.getLongitude(),
                         settings.getLatitude(), settings.getLongitude());
 
-                // Allow 50m radius for production stability (5m is too strict for GPS noise)
-                if (distance > 50.0) {
+                int radius = settings.getGeofenceRadius() != null ? settings.getGeofenceRadius() : 50;
+
+                if (distance > radius) {
                     return ResponseEntity.status(403).body(Map.of(
                             "ok", false,
                             "message", "You must be inside the restaurant to order.",
