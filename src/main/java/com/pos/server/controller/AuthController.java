@@ -73,7 +73,8 @@ public class AuthController {
     public ResponseEntity<?> otpLogin(@RequestBody Map<String, String> request) {
         try {
             String phone = request.get("phone");
-            User user = authService.loginByPhone(phone);
+            String restaurantId = request.get("restaurantId");
+            User user = authService.loginByPhone(phone, restaurantId);
             String token = jwtUtils.generateToken(user.getUsername());
 
             Map<String, Object> response = new HashMap<>();

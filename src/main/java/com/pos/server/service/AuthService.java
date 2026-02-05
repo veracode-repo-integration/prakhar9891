@@ -60,13 +60,35 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public User loginByPhone(String phone) {
-        // Try finding by exact match or with +91 etc.
+    public User loginByPhone(String phone, String restaurantId) {
+        // 1. Clean phone number for normalized matching
+        String cleanPhone = phone.replaceAll("\\D", "");
+
+        // 2. Try various matching strategies
         Optional<User> userOpt = userRepository.findByContact(phone);
-        if (userOpt.isEmpty() && phone.startsWith("+91")) {
-            userOpt = userRepository.findByContact(phone.substring(3)); // Try without +91
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findAll().stream()
+                    .filter(u -> u.getContact() != null && u.getContact().replaceAll("\\D", "").endsWith(
+                            cleanPhone.length() >= 10 ? cleanPhone.substring(cleanPhone.length() - 10) : cleanPhone))
+                    .findFirst();
         }
 
-        return userOpt.orElseThrow(() -> new RuntimeException("No user registered with this phone number."));
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        }
+
+        // 3. DINE-IN GUEST BYPASS: If no user found, auto-register as GUEST
+        System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
+        User guest = new User();
+        // Use sanitized phone as username
+        guest.setUsername("customer_" + cleanPhone);
+        guest.setContact(phone);
+        guest.setFirstName("Guest");
+        guest.setRole("GUEST");
+        guest.setRestaurantId(restaurantId != null ? restaurantId : null);
+        // Random secure password hash that won't be used
+        guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
+
+        return userRepository.save(guest);
     }
 }
