@@ -87,6 +87,11 @@ public class OrderService {
             }
         }
 
+        // Fetch settings to check if stock tracking is disabled
+        Settings settings = commonDataService.getSettings(rid);
+        boolean disableStockTracking = Boolean.TRUE.equals(settings.getDisableStockDecrement());
+        log.info("[OrderService] Checkout for restaurant: {}. Stock Tracking Disabled: {}", rid, disableStockTracking);
+
         // 1. Map Items (Normalize Modifiers)
         List<OrderItem> items = new ArrayList<>();
         for (OrderItem reqItem : request.getItems()) {
@@ -100,26 +105,28 @@ public class OrderService {
             item.setOrder(order);
             items.add(item);
 
-            // 1.1 Scoped Stock Reduction & Logging
-            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(),
-                    rid);
-            if (pOpt.isPresent()) {
-                Product p = pOpt.get();
-                int oldStock = p.getStock();
-                p.setStock(Math.max(0, oldStock - reqItem.getQty()));
-                productRepository.save(p);
+            // 1.1 Scoped Stock Reduction & Logging (Skip if disabled)
+            if (!disableStockTracking) {
+                Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(),
+                        rid);
+                if (pOpt.isPresent()) {
+                    Product p = pOpt.get();
+                    int oldStock = p.getStock();
+                    p.setStock(Math.max(0, oldStock - reqItem.getQty()));
+                    productRepository.save(p);
 
-                // Create Stock Log
-                StockLog logEntry = new StockLog();
-                logEntry.setId(UUID.randomUUID().toString());
-                logEntry.setProductId(p.getId());
-                logEntry.setQtyChange(-reqItem.getQty());
-                logEntry.setType("sale");
-                logEntry.setReason("Sale: Order #" + order.getId());
-                logEntry.setUser(username != null ? username : "system");
-                logEntry.setCreatedAt(java.time.Instant.now().toString());
-                logEntry.setRestaurantId(rid);
-                stockLogRepository.save(logEntry);
+                    // Create Stock Log
+                    StockLog logEntry = new StockLog();
+                    logEntry.setId(UUID.randomUUID().toString());
+                    logEntry.setProductId(p.getId());
+                    logEntry.setQtyChange(-reqItem.getQty());
+                    logEntry.setType("sale");
+                    logEntry.setReason("Sale: Order #" + order.getId());
+                    logEntry.setUser(username != null ? username : "system");
+                    logEntry.setCreatedAt(java.time.Instant.now().toString());
+                    logEntry.setRestaurantId(rid);
+                    stockLogRepository.save(logEntry);
+                }
             }
         }
         order.setItems(items);

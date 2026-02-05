@@ -52,6 +52,8 @@ public class Settings {
     @Column(name = "invoice_prefix")
     private String invoicePrefix = "INV-2026-";
 
+    private Boolean disableStockDecrement;
+
     @Column(columnDefinition = "TEXT")
     private String rawSettingsJson;
 }

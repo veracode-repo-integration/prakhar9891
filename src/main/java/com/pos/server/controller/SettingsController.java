@@ -86,6 +86,9 @@ public class SettingsController {
             if (settings.getGeofenceRadius() != null)
                 node.put("geofenceRadius", settings.getGeofenceRadius());
 
+            node.put("disableStockDecrement",
+                    settings.getDisableStockDecrement() != null ? settings.getDisableStockDecrement() : false);
+
             if (settings.getTableAreas() != null) {
                 node.put("tableAreas", settings.getTableAreas());
             }
@@ -150,6 +153,9 @@ public class SettingsController {
                 settings.setLongitude(settingsNode.get("longitude").asDouble());
             if (settingsNode.has("geofenceRadius"))
                 settings.setGeofenceRadius(settingsNode.get("geofenceRadius").asInt());
+
+            if (settingsNode.has("disableStockDecrement"))
+                settings.setDisableStockDecrement(settingsNode.get("disableStockDecrement").asBoolean());
 
             settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
             settingsRepository.save(settings);
