@@ -40,9 +40,16 @@ public class DineInController {
 
         Optional<RestaurantTable> tableOpt = tableRepository.findById(request.getTableId());
 
-        // Fallback: Try Name Search if ID fails (e.g. Scanned "T5" but ID is "uuid...")
+        // Fallback: Try Name Search if ID fails
         if (tableOpt.isEmpty() && request.getRestaurantId() != null) {
+            // 1. Try exact name (e.g. "T1")
             tableOpt = tableRepository.findByNameAndRestaurantId(request.getTableId(), request.getRestaurantId());
+
+            // 2. Try "Table " + name (e.g. User scanned "1", DB has "Table 1")
+            if (tableOpt.isEmpty()) {
+                tableOpt = tableRepository.findByNameAndRestaurantId("Table " + request.getTableId(),
+                        request.getRestaurantId());
+            }
         }
 
         if (tableOpt.isEmpty()) {
