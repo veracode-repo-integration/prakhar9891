@@ -19,6 +19,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Autowired
+    private JwtAuthenticationEntryPoint unauthorizedHandler;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -29,10 +32,13 @@ public class SecurityConfig {
                 .csrf().disable()
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
+                .exceptionHandling()
+                .authenticationEntryPoint(unauthorizedHandler)
+                .and()
                 .authorizeRequests()
                 // Explicitly allow OPTIONS requests
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/api/auth/login", "/api/auth/register", "/api/debug/**").permitAll()
+                .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/otp-login").permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health").permitAll()
                 // Secure all other POS logic
@@ -66,9 +72,11 @@ public class SecurityConfig {
         org.springframework.web.cors.CorsConfiguration configuration = new org.springframework.web.cors.CorsConfiguration();
 
         // Use configured origins
-        if (allowedOrigins != null && !allowedOrigins.equals("*")) {
+        if (allowedOrigins != null && !allowedOrigins.equals("*") && !allowedOrigins.isEmpty()) {
             configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
         } else {
+            // In production, NEVER use setAllowedOriginPatterns("*")
+            // Set this to your frontend URL in application.properties
             configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
         }
 

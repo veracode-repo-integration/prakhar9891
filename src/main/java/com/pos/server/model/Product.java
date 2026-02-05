@@ -5,7 +5,11 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "pos_products")
+@Table(name = "pos_products", indexes = {
+        @Index(name = "idx_prod_restaurant", columnList = "restaurant_id"),
+        @Index(name = "idx_prod_category", columnList = "category"),
+        @Index(name = "idx_prod_barcode", columnList = "barcode")
+})
 public class Product {
     @Id
     private String id;

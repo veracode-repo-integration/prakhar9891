@@ -13,7 +13,12 @@ import org.hibernate.annotations.FetchMode;
  */
 @Entity
 @Data
-@Table(name = "pos_orders")
+@Table(name = "pos_orders", indexes = {
+        @Index(name = "idx_order_restaurant", columnList = "restaurant_id"),
+        @Index(name = "idx_order_table", columnList = "table_id"),
+        @Index(name = "idx_order_date", columnList = "created_at"),
+        @Index(name = "idx_order_status", columnList = "order_status")
+})
 public class Order {
     @Id
     private String id;
