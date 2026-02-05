@@ -16,7 +16,10 @@ import org.hibernate.annotations.FetchMode;
 @Table(name = "pos_orders")
 public class Order {
     @Id
-    private String id; // UUID or unique readable ID
+    private String id;
+
+    @Column(name = "invoice_number")
+    private String invoiceNumber; // Legal sequence like INV-2025-001
 
     @Column(columnDefinition = "TEXT")
     private String note;

@@ -59,4 +59,14 @@ public class AuthService {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
+
+    public User loginByPhone(String phone) {
+        // Try finding by exact match or with +91 etc.
+        Optional<User> userOpt = userRepository.findByContact(phone);
+        if (userOpt.isEmpty() && phone.startsWith("+91")) {
+            userOpt = userRepository.findByContact(phone.substring(3)); // Try without +91
+        }
+
+        return userOpt.orElseThrow(() -> new RuntimeException("No user registered with this phone number."));
+    }
 }

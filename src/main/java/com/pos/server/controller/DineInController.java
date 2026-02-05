@@ -39,6 +39,19 @@ public class DineInController {
         }
 
         Optional<RestaurantTable> tableOpt = tableRepository.findById(request.getTableId());
+
+        // Fallback: Try Name Search if ID fails
+        if (tableOpt.isEmpty() && request.getRestaurantId() != null) {
+            // 1. Try exact name (e.g. "T1")
+            tableOpt = tableRepository.findByNameAndRestaurantId(request.getTableId(), request.getRestaurantId());
+
+            // 2. Try "Table " + name (e.g. User scanned "1", DB has "Table 1")
+            if (tableOpt.isEmpty()) {
+                tableOpt = tableRepository.findByNameAndRestaurantId("Table " + request.getTableId(),
+                        request.getRestaurantId());
+            }
+        }
+
         if (tableOpt.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Table not found"));
         }
@@ -55,13 +68,14 @@ public class DineInController {
             Settings settings = settingsOpt.get();
 
             // Check if Store Location is configured
-            if (settings.getLatitude() != 0.0 || settings.getLongitude() != 0.0) {
+            if (settings.getLatitude() != null && settings.getLongitude() != null) {
                 double distance = LocationUtils.distance(
                         request.getLatitude(), request.getLongitude(),
                         settings.getLatitude(), settings.getLongitude());
 
-                // Allow 50m radius for production stability (5m is too strict for GPS noise)
-                if (distance > 50.0) {
+                int radius = settings.getGeofenceRadius() != null ? settings.getGeofenceRadius() : 50;
+
+                if (distance > radius) {
                     return ResponseEntity.status(403).body(Map.of(
                             "ok", false,
                             "message", "You must be inside the restaurant to order.",

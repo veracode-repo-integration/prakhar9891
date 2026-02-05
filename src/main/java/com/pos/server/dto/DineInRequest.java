@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class DineInRequest {
     private String tableId;
+    private String restaurantId;
     private double latitude;
     private double longitude;
 }

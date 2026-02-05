@@ -92,6 +92,12 @@ public class TableService {
                 if (updates.containsKey("kitchenStatus"))
                     table.setKitchenStatus((String) updates.get("kitchenStatus"));
 
+                if (updates.containsKey("customerName"))
+                    table.setCustomerName((String) updates.get("customerName"));
+
+                if (updates.containsKey("customerMobile"))
+                    table.setCustomerMobile((String) updates.get("customerMobile"));
+
                 log.info("Updating table: {}", id);
                 return tableRepository.save(table);
             } catch (Exception e) {
@@ -114,6 +120,8 @@ public class TableService {
                 table.setGuestCount(0);
                 table.setSessionStart(null);
                 table.setKitchenStatus(null);
+                table.setCustomerName(null);
+                table.setCustomerMobile(null);
             }
             log.info("Updated status of table {} to {}", id, status);
             return tableRepository.save(table);

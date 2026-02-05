@@ -17,11 +17,14 @@ public class Product {
     private String barcode;
     private double costPrice;
     private double tax;
+    @Column(name = "tax_category")
+    private String taxCategory;
 
-    // For composite products logic if needed later
-    // For composite products logic if needed later
+    @Column(name = "hsn_code")
+    private String hsnCode = "9963"; // Default for restaurant services
+
     @Column(columnDefinition = "TEXT")
-    private String composition; // JSON string or logic to be handled
+    private String composition;
 
     @Column(name = "restaurant_id")
     private String restaurantId;
