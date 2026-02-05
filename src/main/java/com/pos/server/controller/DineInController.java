@@ -39,6 +39,12 @@ public class DineInController {
         }
 
         Optional<RestaurantTable> tableOpt = tableRepository.findById(request.getTableId());
+
+        // Fallback: Try Name Search if ID fails (e.g. Scanned "T5" but ID is "uuid...")
+        if (tableOpt.isEmpty() && request.getRestaurantId() != null) {
+            tableOpt = tableRepository.findByNameAndRestaurantId(request.getTableId(), request.getRestaurantId());
+        }
+
         if (tableOpt.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Table not found"));
         }

@@ -19,4 +19,6 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
     List<RestaurantTable> findAllByRestaurantId(String restaurantId);
 
     Optional<RestaurantTable> findByIdAndRestaurantId(String id, String restaurantId);
+
+    Optional<RestaurantTable> findByNameAndRestaurantId(String name, String restaurantId);
 }
