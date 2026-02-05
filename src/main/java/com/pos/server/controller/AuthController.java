@@ -69,6 +69,30 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/otp-login")
+    public ResponseEntity<?> otpLogin(@RequestBody Map<String, String> request) {
+        try {
+            String phone = request.get("phone");
+            User user = authService.loginByPhone(phone);
+            String token = jwtUtils.generateToken(user.getUsername());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("ok", true);
+            response.put("token", token);
+            response.put("user", new com.pos.server.dto.UserResponse(
+                    user.getDbId(),
+                    user.getUsername(),
+                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
+                    user.getEmail(),
+                    user.getContact(),
+                    user.getRole(),
+                    user.getRestaurantId()));
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile() {
         try {
