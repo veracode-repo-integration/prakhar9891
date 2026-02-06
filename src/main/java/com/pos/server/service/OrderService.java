@@ -54,6 +54,16 @@ public class OrderService {
         return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
     }
 
+    public org.springframework.data.domain.Page<Order> getOrdersPaged(String restaurantId, int page, int size) {
+        log.info("Fetching orders V2 for restaurant: {}, page: {}, size: {}", restaurantId, page, size);
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return org.springframework.data.domain.Page.empty();
+        }
+        org.springframework.data.domain.Pageable p = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by("createdAt").descending());
+        return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim(), p);
+    }
+
     @Transactional
     @SuppressWarnings("unchecked")
     public Order processCheckout(CheckoutRequest request) throws Exception {

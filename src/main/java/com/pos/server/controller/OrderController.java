@@ -28,6 +28,15 @@ public class OrderController {
         return orderService.getAllOrders(rid);
     }
 
+    @GetMapping("/v2/pos-orders")
+    public org.springframework.data.domain.Page<Order> getOrdersPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        String rid = validateRestaurantAccess(restaurantId);
+        return orderService.getOrdersPaged(rid, page, size);
+    }
+
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody CheckoutRequest request,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
