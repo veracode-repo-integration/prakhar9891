@@ -15,6 +15,9 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
+    private com.pos.server.repository.CustomerRepository customerRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public User register(com.pos.server.dto.RegisterRequest request) {
@@ -60,7 +63,19 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public User loginByPhone(String phone, String restaurantId) {
+    public boolean checkUserExistsByPhone(String phone) {
+        String cleanPhone = phone.replaceAll("\\D", "");
+        return userRepository.findAll().stream()
+                .anyMatch(u -> {
+                    if (u.getContact() == null)
+                        return false;
+                    String c = u.getContact().replaceAll("\\D", "");
+                    return c.endsWith(
+                            cleanPhone.length() >= 10 ? cleanPhone.substring(cleanPhone.length() - 10) : cleanPhone);
+                });
+    }
+
+    public User loginByPhone(String phone, String restaurantId, String providedName) {
         // 1. Clean phone number for normalized matching
         String cleanPhone = phone.replaceAll("\\D", "");
 
@@ -77,18 +92,40 @@ public class AuthService {
             return userOpt.get();
         }
 
-        // 3. DINE-IN GUEST BYPASS: If no user found, auto-register as GUEST
-        System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
-        User guest = new User();
-        // Use sanitized phone as username
-        guest.setUsername("customer_" + cleanPhone);
-        guest.setContact(phone);
-        guest.setFirstName("Guest");
-        guest.setRole("GUEST");
-        guest.setRestaurantId(restaurantId != null ? restaurantId : null);
-        // Random secure password hash that won't be used
-        guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
+        // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
+        // (implies Dine-In context)
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
+            User guest = new User();
+            guest.setUsername("customer_" + cleanPhone);
+            guest.setContact(phone);
+            guest.setFirstName(providedName != null && !providedName.isEmpty() ? providedName : "Guest");
+            guest.setRole("GUEST");
+            guest.setRestaurantId(restaurantId);
+            guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
 
-        return userRepository.save(guest);
+            User savedUser = userRepository.save(guest);
+
+            // Also save to Customers table so they appear in the Customers list for the
+            // shopkeeper
+            try {
+                if (customerRepository.findByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
+                    com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
+                    customer.setId("cust_" + cleanPhone + "_" + restaurantId);
+                    customer.setName(providedName != null && !providedName.isEmpty() ? providedName : "Guest " + phone);
+                    customer.setMobile(phone);
+                    customer.setType("New");
+                    customer.setRestaurantId(restaurantId);
+                    customer.setJoinedAt(java.time.OffsetDateTime.now().toString());
+                    customerRepository.save(customer);
+                }
+            } catch (Exception e) {
+                System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
+            }
+
+            return savedUser;
+        }
+
+        throw new RuntimeException("Account not found. Please sign up first.");
     }
 }

@@ -22,6 +22,12 @@ public class AuthController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @GetMapping("/check-user")
+    public ResponseEntity<?> checkUser(@RequestParam String phone) {
+        boolean exists = authService.checkUserExistsByPhone(phone);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody com.pos.server.dto.RegisterRequest request) {
         try {
@@ -74,7 +80,8 @@ public class AuthController {
         try {
             String phone = request.get("phone");
             String restaurantId = request.get("restaurantId");
-            User user = authService.loginByPhone(phone, restaurantId);
+            String name = request.get("name");
+            User user = authService.loginByPhone(phone, restaurantId, name);
             String token = jwtUtils.generateToken(user.getUsername());
 
             Map<String, Object> response = new HashMap<>();
