@@ -58,13 +58,16 @@ public class ProductService {
     private void assignDefaultImage(Product product) {
         if (product.getImage() == null || product.getImage().trim().isEmpty() || product.getImage().equals("null")) {
             try {
-                // Generate a high-quality search URL for Unsplash
+                // Using LoremFlickr (Reliable, Free, No Key)
                 String query = (product.getName() != null ? product.getName() : "food");
-                String encodedQuery = java.net.URLEncoder.encode(query, "UTF-8");
-                // Using "Source" Discovery URL - it automatically finds the best match
-                product.setImage("https://source.unsplash.com/800x600/?food," + encodedQuery);
+                // Simplified encoding for LoremFlickr keywords
+                String encodedQuery = java.net.URLEncoder.encode(query.replace(" ", ","), "UTF-8");
+
+                // Format: https://loremflickr.com/{width}/{height}/{keywords}
+                product.setImage("https://loremflickr.com/800/600/" + encodedQuery + ",food/all");
             } catch (Exception e) {
-                product.setImage("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=800&auto=format");
+                // Fallback to a static food image if encoding fails
+                product.setImage("https://loremflickr.com/800/600/food,restaurant/all");
             }
         }
     }
