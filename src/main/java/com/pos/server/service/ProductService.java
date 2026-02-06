@@ -101,10 +101,13 @@ public class ProductService {
                             System.err.println("GCS Upload failed during update: " + e.getMessage());
                             product.setImage(updates.getImage());
                         }
-                    } else if (product.getImage() == null || product.getImage().trim().isEmpty()
-                            || product.getImage().equals("null")) {
-                        // FIX: Assign default image if current is missing and no new image is provided
-                        assignDefaultImage(product);
+                    } else {
+                        // If no new image provided in update, check if we need to auto-assign for
+                        // existing product
+                        if (product.getImage() == null || product.getImage().trim().isEmpty()
+                                || product.getImage().equals("null")) {
+                            assignDefaultImage(product);
+                        }
                     }
 
                     if (updates.getBarcode() != null)
