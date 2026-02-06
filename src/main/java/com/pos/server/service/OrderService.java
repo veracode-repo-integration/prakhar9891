@@ -237,10 +237,17 @@ public class OrderService {
         Order savedOrder = orderRepository.saveAndFlush(order);
 
         // --- VACATE TABLE IF DINE-IN ---
+        // --- VACATE TABLE IF DINE-IN ---
         if (request.getTableId() != null && !request.getTableId().isEmpty()) {
-            Optional<RestaurantTable> tOpt = tableRepository.findByIdAndRestaurantId(request.getTableId(), rid);
+            List<RestaurantTable> tables = tableRepository.findAllByIdAndRestaurantId(request.getTableId(), rid);
 
-            tOpt.ifPresent(table -> {
+            if (!tables.isEmpty()) {
+                RestaurantTable table = tables.get(0); // Take the first one if duplicates exist
+                if (tables.size() > 1) {
+                    log.warn("Found {} duplicate tables for ID {} in restaurant {}. Using first result.", tables.size(),
+                            request.getTableId(), rid);
+                }
+
                 table.setStatus("available");
                 table.setCurrentOrder(null);
                 table.setGuestCount(0);
@@ -248,7 +255,9 @@ public class OrderService {
                 table.setKitchenStatus(null);
                 tableRepository.save(table);
                 log.info("Table {} vacated successfully after checkout", request.getTableId());
-            });
+            } else {
+                log.warn("Table {} not found for vacating after checkout in restaurant {}", request.getTableId(), rid);
+            }
         }
 
         // --- ADD TO CREDIT LEDGER IF PAY LATER ---
