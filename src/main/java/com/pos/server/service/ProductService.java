@@ -42,6 +42,15 @@ public class ProductService {
         return productRepository.save(product);
     }
 
+    public List<Product> saveAllProducts(List<Product> products) {
+        for (Product product : products) {
+            if (product.getId() == null || product.getId().isEmpty()) {
+                product.setId("prod-" + UUID.randomUUID().toString());
+            }
+        }
+        return productRepository.saveAll(products);
+    }
+
     public void deleteProduct(String id) {
         productRepository.deleteById(id);
     }

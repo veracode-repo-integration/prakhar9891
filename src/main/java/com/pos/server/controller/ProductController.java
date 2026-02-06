@@ -35,6 +35,17 @@ public class ProductController {
         return ResponseEntity.ok(saved);
     }
 
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Product>> bulkSaveProducts(@RequestBody List<Product> products,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        String rid = validateRestaurantAccess(restaurantId);
+        for (Product product : products) {
+            product.setRestaurantId(rid);
+        }
+        List<Product> saved = productService.saveAllProducts(products);
+        return ResponseEntity.ok(saved);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable String id) {
         // For strict security, we should check if the product belongs to the user's
