@@ -50,56 +50,74 @@ public class TableService {
 
     @Transactional
     public Optional<RestaurantTable> updateTable(String id, Map<String, Object> updates, String restaurantId) {
-        Optional<RestaurantTable> tableOpt = (restaurantId == null || restaurantId.trim().isEmpty())
-                ? tableRepository.findById(id)
-                : tableRepository.findByIdAndRestaurantId(id, restaurantId);
+        RestaurantTable table = null;
 
-        return tableOpt.map(table -> {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            Optional<RestaurantTable> opt = tableRepository.findById(id);
+            if (opt.isPresent())
+                table = opt.get();
+        } else {
+            // Robust lookup handling duplicates
+            List<RestaurantTable> tables = tableRepository.findAllByIdAndRestaurantId(id, restaurantId);
+            if (!tables.isEmpty()) {
+                table = tables.get(0);
+                if (tables.size() > 1) {
+                    log.warn("Found {} duplicate tables for ID {} during update. Using first one.", tables.size(), id);
+                }
+            } else {
+                // Try finding by Name if ID lookup fails (common if ID is actually a name)
+                Optional<RestaurantTable> nameOpt = tableRepository.findByNameAndRestaurantId(id, restaurantId);
+                if (nameOpt.isPresent())
+                    table = nameOpt.get();
+            }
+        }
+
+        return Optional.ofNullable(table).map(t -> {
             try {
                 if (updates.containsKey("name"))
-                    table.setName((String) updates.get("name"));
+                    t.setName((String) updates.get("name"));
                 if (updates.containsKey("area"))
-                    table.setArea((String) updates.get("area"));
+                    t.setArea((String) updates.get("area"));
                 if (updates.containsKey("status"))
-                    table.setStatus((String) updates.get("status"));
+                    t.setStatus((String) updates.get("status"));
                 if (updates.containsKey("capacity"))
-                    table.setCapacity(((Number) updates.get("capacity")).intValue());
+                    t.setCapacity(((Number) updates.get("capacity")).intValue());
 
                 // Handle currentOrder flexibly
                 if (updates.containsKey("currentOrder")) {
                     Object orderObj = updates.get("currentOrder");
                     if (orderObj instanceof String) {
-                        table.setCurrentOrder((String) orderObj);
+                        t.setCurrentOrder((String) orderObj);
                     } else if (orderObj != null) {
-                        table.setCurrentOrder(mapper.writeValueAsString(orderObj));
+                        t.setCurrentOrder(mapper.writeValueAsString(orderObj));
                     } else {
-                        table.setCurrentOrder(null);
+                        t.setCurrentOrder(null);
                     }
                 }
 
                 if (updates.containsKey("guestCount"))
-                    table.setGuestCount(((Number) updates.get("guestCount")).intValue());
+                    t.setGuestCount(((Number) updates.get("guestCount")).intValue());
 
                 if (updates.containsKey("sessionStart")) {
                     Object sessionStart = updates.get("sessionStart");
                     if (sessionStart instanceof Number) {
-                        table.setSessionStart(((Number) sessionStart).longValue());
+                        t.setSessionStart(((Number) sessionStart).longValue());
                     } else {
-                        table.setSessionStart(null);
+                        t.setSessionStart(null);
                     }
                 }
 
                 if (updates.containsKey("kitchenStatus"))
-                    table.setKitchenStatus((String) updates.get("kitchenStatus"));
+                    t.setKitchenStatus((String) updates.get("kitchenStatus"));
 
                 if (updates.containsKey("customerName"))
-                    table.setCustomerName((String) updates.get("customerName"));
+                    t.setCustomerName((String) updates.get("customerName"));
 
                 if (updates.containsKey("customerMobile"))
-                    table.setCustomerMobile((String) updates.get("customerMobile"));
+                    t.setCustomerMobile((String) updates.get("customerMobile"));
 
-                log.info("Updating table: {}", id);
-                return tableRepository.save(table);
+                log.info("Updating table: {}", t.getId());
+                return tableRepository.save(t);
             } catch (Exception e) {
                 log.error("Error updating table {}: ", id, e);
                 throw new RuntimeException("Failed to update table: " + e.getMessage());
