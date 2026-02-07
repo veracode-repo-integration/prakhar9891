@@ -67,6 +67,21 @@ public class AuthService {
             userOpt = userRepository.findByContact(phone.substring(3)); // Try without +91
         }
 
-        return userOpt.orElseThrow(() -> new RuntimeException("No user registered with this phone number."));
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        }
+
+        // Auto-Register New User
+        User newUser = new User();
+        newUser.setUsername(phone);
+        newUser.setContact(phone);
+        // Default to ADMIN so they can setup their shop
+        newUser.setRole("ADMIN");
+        // Use phone as default Restaurant ID (Unique & Memorable)
+        newUser.setRestaurantId(phone);
+        // Set a random password since they used OTP
+        newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+
+        return userRepository.save(newUser);
     }
 }
