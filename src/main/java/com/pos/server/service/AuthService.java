@@ -20,6 +20,22 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210}")
+    private String superAdminPhones;
+
+    private User assignSuperAdminIfApplicable(User user, String cleanPhone) {
+        if (superAdminPhones != null && !superAdminPhones.isEmpty()) {
+            boolean isSuperAdmin = java.util.Arrays.stream(superAdminPhones.split(","))
+                    .map(p -> p.replaceAll("\\D", ""))
+                    .anyMatch(p -> p.equals(cleanPhone) || cleanPhone.endsWith(p));
+            if (isSuperAdmin && !"SUPER_ADMIN".equals(user.getRole())) {
+                user.setRole("SUPER_ADMIN");
+                return userRepository.save(user); // Force role upgrade and save
+            }
+        }
+        return user;
+    }
+
     public User register(com.pos.server.dto.RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new RuntimeException("User exists");
@@ -89,7 +105,7 @@ public class AuthService {
         }
 
         if (userOpt.isPresent()) {
-            return userOpt.get();
+            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
         }
 
         // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
@@ -127,7 +143,7 @@ public class AuthService {
         }
 
         if (userOpt.isPresent()) {
-            return userOpt.get();
+            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
         }
 
         // Auto-Register New User
@@ -141,6 +157,6 @@ public class AuthService {
         // Set a random password since they used OTP
         newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
 
-        return userRepository.save(newUser);
+        return assignSuperAdminIfApplicable(userRepository.save(newUser), cleanPhone);
     }
 }
