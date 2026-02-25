@@ -173,4 +173,39 @@ public class SuperAdminController {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+
+    @GetMapping("/restaurants/{id}/users")
+    public ResponseEntity<?> getUsersOfRestaurant(@PathVariable String id) {
+        try {
+            validateSuperAdmin();
+            List<User> users = userRepository.findAllByRestaurantId(id);
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/restaurants/{id}")
+    public ResponseEntity<?> deleteRestaurant(@PathVariable String id) {
+        try {
+            validateSuperAdmin();
+            restaurantRepository.deleteById(id);
+            return ResponseEntity
+                    .ok(Map.of("ok", true, "message", "Restaurant " + id + " deleted from management table"));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/users/{username}")
+    public ResponseEntity<?> deleteUser(@PathVariable String username) {
+        try {
+            validateSuperAdmin();
+            User user = authService.findByUsername(username);
+            authService.deleteUser(username);
+            return ResponseEntity.ok(Map.of("ok", true, "message", "User " + username + " deleted"));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 }
