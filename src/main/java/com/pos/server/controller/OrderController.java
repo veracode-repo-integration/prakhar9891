@@ -22,6 +22,9 @@ public class OrderController {
     @Autowired
     private com.pos.server.service.OrderService orderService;
 
+    @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
     @GetMapping("/pos-orders")
     public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         String rid = validateRestaurantAccess(restaurantId);
@@ -45,6 +48,8 @@ public class OrderController {
             request.setRestaurantId(rid);
 
             Order saved = orderService.processCheckout(request);
+            // Notify subscribers about new order
+            messagingTemplate.convertAndSend("/topic/orders", saved);
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
@@ -61,6 +66,8 @@ public class OrderController {
             String rid = validateRestaurantAccess(restaurantId);
             Order updated = orderService.updateOrder(id, updates, rid);
             if (updated != null) {
+                // Notify subscribers about updated order
+                messagingTemplate.convertAndSend("/topic/orders", updated);
                 return ResponseEntity.ok(Map.of("ok", true, "order", updated));
             }
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));

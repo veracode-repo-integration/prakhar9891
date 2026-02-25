@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health").permitAll()
+                .antMatchers("/ws-pos/**").permitAll()
                 // Secure all other POS logic
                 .antMatchers("/api/**").authenticated()
                 .anyRequest().authenticated();

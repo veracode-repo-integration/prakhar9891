@@ -51,6 +51,7 @@ public class OrderService {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new ArrayList<>();
         }
+        // Force Sort by date DESC
         return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
     }
 

@@ -15,6 +15,9 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
+    private com.pos.server.repository.CustomerRepository customerRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     public User register(com.pos.server.dto.RegisterRequest request) {
@@ -60,11 +63,67 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    public User loginByPhone(String phone) {
-        // Try finding by exact match or with +91 etc.
+    public boolean checkUserExistsByPhone(String phone) {
+        String cleanPhone = phone.replaceAll("\\D", "");
+        return userRepository.findAll().stream()
+                .anyMatch(u -> {
+                    if (u.getContact() == null)
+                        return false;
+                    String c = u.getContact().replaceAll("\\D", "");
+                    return c.endsWith(
+                            cleanPhone.length() >= 10 ? cleanPhone.substring(cleanPhone.length() - 10) : cleanPhone);
+                });
+    }
+
+    public User loginByPhone(String phone, String restaurantId, String providedName) {
+        // 1. Clean phone number for normalized matching
+        String cleanPhone = phone.replaceAll("\\D", "");
+
+        // 2. Try various matching strategies
         Optional<User> userOpt = userRepository.findByContact(phone);
-        if (userOpt.isEmpty() && phone.startsWith("+91")) {
-            userOpt = userRepository.findByContact(phone.substring(3)); // Try without +91
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findAll().stream()
+                    .filter(u -> u.getContact() != null && u.getContact().replaceAll("\\D", "").endsWith(
+                            cleanPhone.length() >= 10 ? cleanPhone.substring(cleanPhone.length() - 10) : cleanPhone))
+                    .findFirst();
+        }
+
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        }
+
+        // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
+        // (implies Dine-In context)
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
+            User guest = new User();
+            guest.setUsername("customer_" + cleanPhone);
+            guest.setContact(phone);
+            guest.setFirstName(providedName != null && !providedName.isEmpty() ? providedName : "Guest");
+            guest.setRole("GUEST");
+            guest.setRestaurantId(restaurantId);
+            guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
+
+            User savedUser = userRepository.save(guest);
+
+            // Also save to Customers table so they appear in the Customers list for the
+            // shopkeeper
+            try {
+                if (customerRepository.findByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
+                    com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
+                    customer.setId("cust_" + cleanPhone + "_" + restaurantId);
+                    customer.setName(providedName != null && !providedName.isEmpty() ? providedName : "Guest " + phone);
+                    customer.setMobile(phone);
+                    customer.setType("New");
+                    customer.setRestaurantId(restaurantId);
+                    customer.setJoinedAt(java.time.OffsetDateTime.now().toString());
+                    customerRepository.save(customer);
+                }
+            } catch (Exception e) {
+                System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
+            }
+
+            return savedUser;
         }
 
         if (userOpt.isPresent()) {
