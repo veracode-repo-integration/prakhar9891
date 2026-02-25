@@ -215,11 +215,23 @@ public class SuperAdminController {
     public ResponseEntity<?> deleteRestaurant(@PathVariable String id) {
         try {
             validateSuperAdmin();
-            restaurantRepository.deleteById(id);
-            return ResponseEntity
-                    .ok(Map.of("ok", true, "message", "Restaurant " + id + " deleted from management table"));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+        try {
+            // Delete from restaurant table if it exists
+            if (restaurantRepository.existsById(id)) {
+                restaurantRepository.deleteById(id);
+            }
+            // Also remove all users belonging to this restaurant (handles inferred stores)
+            List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(id);
+            for (com.pos.server.model.User u : users) {
+                userRepository.delete(u);
+            }
+            return ResponseEntity.ok(Map.of("ok", true,
+                    "message", "Store " + id + " and " + users.size() + " user(s) removed."));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", "Delete failed: " + e.getMessage()));
         }
     }
 
@@ -227,11 +239,19 @@ public class SuperAdminController {
     public ResponseEntity<?> deleteUser(@PathVariable String username) {
         try {
             validateSuperAdmin();
-            User user = authService.findByUsername(username);
-            authService.deleteUser(username);
-            return ResponseEntity.ok(Map.of("ok", true, "message", "User " + username + " deleted"));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+        try {
+            Optional<com.pos.server.model.User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                userRepository.delete(userOpt.get());
+                return ResponseEntity.ok(Map.of("ok", true, "message", "User " + username + " deleted"));
+            } else {
+                return ResponseEntity.ok(Map.of("ok", true, "message", "User not found, nothing to delete"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", "Delete failed: " + e.getMessage()));
         }
     }
 }
