@@ -25,18 +25,36 @@ public class SuperAdminController {
     @Autowired
     private AuthService authService;
 
+    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
+    private String superAdminPhones;
+
     private void validateSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-            throw new RuntimeException("Unauthorized");
+            throw new RuntimeException("Unauthorized: Session not found");
         }
 
-        boolean isSuperAdmin = auth.getAuthorities().stream()
+        // 1. Check Authority (Transitional role from JWT)
+        boolean hasRole = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
 
-        if (!isSuperAdmin) {
-            throw new RuntimeException("Forbidden: Only Super Admins can access this endpoint");
+        if (hasRole)
+            return;
+
+        // 2. Fallback: Check if the authenticated username (phone) is in the superadmin
+        // list
+        String username = auth.getName();
+        if (superAdminPhones != null && username != null) {
+            String cleanUser = username.replaceAll("\\D", "");
+            boolean isPhoneMatch = java.util.Arrays.stream(superAdminPhones.split(","))
+                    .map(p -> p.replaceAll("\\D", ""))
+                    .anyMatch(p -> p.equals(cleanUser) || cleanUser.endsWith(p));
+
+            if (isPhoneMatch)
+                return;
         }
+
+        throw new RuntimeException("Forbidden: Access denied for " + username);
     }
 
     @GetMapping("/restaurants")

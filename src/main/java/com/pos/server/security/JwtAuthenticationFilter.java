@@ -29,6 +29,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        if (request.getServletPath().startsWith("/api/superadmin")) {
+            System.out.println("[Security] SuperAdmin Request: " + request.getServletPath() + " Header: "
+                    + (authHeader != null ? "Present" : "MISSING"));
+        }
         String token = null;
         String username = null;
         String role = null;
