@@ -25,6 +25,9 @@ public class SuperAdminController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private com.pos.server.repository.UserRepository userRepository;
+
     @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
     private String superAdminPhones;
 
@@ -61,7 +64,44 @@ public class SuperAdminController {
     public ResponseEntity<?> getAllRestaurants() {
         try {
             validateSuperAdmin();
+
+            // 1. Get managed restaurants from DB
             List<Restaurant> restaurants = restaurantRepository.findAll();
+            java.util.Set<String> existingIds = restaurants.stream()
+                    .map(Restaurant::getId)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            // 2. Discover "Implicit" restaurants from Users table
+            java.util.List<User> allUsers = userRepository.findAll();
+            java.util.Map<String, List<User>> usersByRestaurant = allUsers.stream()
+                    .filter(u -> u.getRestaurantId() != null && !u.getRestaurantId().trim().isEmpty())
+                    .collect(java.util.stream.Collectors.groupingBy(User::getRestaurantId));
+
+            for (String rid : usersByRestaurant.keySet()) {
+                if (!existingIds.contains(rid)) {
+                    // Create a transient placeholder for display
+                    Restaurant placeholder = new Restaurant();
+                    placeholder.setId(rid);
+                    placeholder.setName(rid.substring(0, 1).toUpperCase() + rid.substring(1) + " (Inferred)");
+                    placeholder.setStatus("ACTIVE");
+                    placeholder.setPlanName("TRIAL");
+
+                    // Try to pick a name from one of the users
+                    List<User> rUsers = usersByRestaurant.get(rid);
+                    Optional<User> admin = rUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
+                            .findFirst();
+                    if (admin.isPresent()) {
+                        placeholder.setPhone(admin.get().getContact());
+                        placeholder.setEmail(admin.get().getEmail());
+                        if (admin.get().getFirstName() != null) {
+                            placeholder.setName(admin.get().getFirstName() + "'s Shop");
+                        }
+                    }
+
+                    restaurants.add(placeholder);
+                }
+            }
+
             return ResponseEntity.ok(restaurants);
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
@@ -76,6 +116,16 @@ public class SuperAdminController {
             if (restaurantOpt.isPresent()) {
                 return ResponseEntity.ok(restaurantOpt.get());
             }
+
+            // Discovery Fallback
+            List<User> users = userRepository.findAllByRestaurantId(id);
+            if (!users.isEmpty()) {
+                Restaurant placeholder = new Restaurant();
+                placeholder.setId(id);
+                placeholder.setName(id + " (Found in Users)");
+                return ResponseEntity.ok(placeholder);
+            }
+
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Restaurant not found"));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
@@ -87,35 +137,38 @@ public class SuperAdminController {
         try {
             validateSuperAdmin();
             Optional<Restaurant> restaurantOpt = restaurantRepository.findById(id);
+            Restaurant r;
 
             if (restaurantOpt.isPresent()) {
-                Restaurant r = restaurantOpt.get();
-
-                if (updates.containsKey("name"))
-                    r.setName((String) updates.get("name"));
-                if (updates.containsKey("status"))
-                    r.setStatus((String) updates.get("status"));
-                if (updates.containsKey("planName"))
-                    r.setPlanName((String) updates.get("planName"));
-
-                if (updates.containsKey("subscriptionEndDate")) {
-                    Object dateObj = updates.get("subscriptionEndDate");
-                    if (dateObj instanceof Number) {
-                        r.setSubscriptionEndDate(((Number) dateObj).longValue());
-                    } else if (dateObj == null) {
-                        r.setSubscriptionEndDate(null);
-                    }
-                }
-
-                if (updates.containsKey("allowedFeatures")) {
-                    r.setAllowedFeatures((List<String>) updates.get("allowedFeatures"));
-                }
-
-                restaurantRepository.save(r);
-                return ResponseEntity.ok(Map.of("ok", true, "restaurant", r));
+                r = restaurantOpt.get();
+            } else {
+                // Auto-create restaurant entry if it exists in system but not in table
+                r = new Restaurant();
+                r.setId(id);
             }
 
-            return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Restaurant not found"));
+            if (updates.containsKey("name"))
+                r.setName((String) updates.get("name"));
+            if (updates.containsKey("status"))
+                r.setStatus((String) updates.get("status"));
+            if (updates.containsKey("planName"))
+                r.setPlanName((String) updates.get("planName"));
+
+            if (updates.containsKey("subscriptionEndDate")) {
+                Object dateObj = updates.get("subscriptionEndDate");
+                if (dateObj instanceof Number) {
+                    r.setSubscriptionEndDate(((Number) dateObj).longValue());
+                } else if (dateObj == null) {
+                    r.setSubscriptionEndDate(null);
+                }
+            }
+
+            if (updates.containsKey("allowedFeatures")) {
+                r.setAllowedFeatures((List<String>) updates.get("allowedFeatures"));
+            }
+
+            restaurantRepository.save(r);
+            return ResponseEntity.ok(Map.of("ok", true, "restaurant", r));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
