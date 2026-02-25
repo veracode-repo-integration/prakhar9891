@@ -44,9 +44,7 @@ public class Restaurant {
         }
     }
 
-    @PrePersist
-    @PreUpdate
-    private void saveFeatures() {
+    private void saveFeaturesInternal() {
         try {
             if (this.allowedFeatures == null || this.allowedFeatures.isEmpty()) {
                 this.allowedFeatures = new java.util.ArrayList<>(java.util.Arrays.asList(
@@ -72,10 +70,12 @@ public class Restaurant {
             status = "ACTIVE";
         if (planName == null)
             planName = "FREE";
+        saveFeaturesInternal();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = System.currentTimeMillis();
+        saveFeaturesInternal();
     }
 }
