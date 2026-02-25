@@ -31,10 +31,10 @@ public class SuperAdminController {
             throw new RuntimeException("Unauthorized");
         }
 
-        String username = auth.getName();
-        User user = authService.findByUsername(username);
+        boolean isSuperAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
 
-        if (!"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+        if (!isSuperAdmin) {
             throw new RuntimeException("Forbidden: Only Super Admins can access this endpoint");
         }
     }
