@@ -109,7 +109,7 @@ public class AuthService {
             // Also save to Customers table so they appear in the Customers list for the
             // shopkeeper
             try {
-                if (customerRepository.findByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
+                if (customerRepository.findFirstByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
                     com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
                     customer.setId("cust_" + cleanPhone + "_" + restaurantId);
                     customer.setName(providedName != null && !providedName.isEmpty() ? providedName : "Guest " + phone);
