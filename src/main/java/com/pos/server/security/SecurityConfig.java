@@ -38,7 +38,8 @@ public class SecurityConfig {
                 .authorizeRequests()
                 // Explicitly allow OPTIONS requests
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/otp-login", "/api/dine-in/scan",
+                .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/otp-login", "/api/auth/check-user",
+                        "/api/dine-in/scan",
                         "/ws-pos/**")
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
