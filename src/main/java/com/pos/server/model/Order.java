@@ -44,10 +44,10 @@ public class Order {
     private double discountValue;
 
     @Column(name = "tax_rate")
-    private double taxRate;
+    private Double taxRate;
 
     @Column(name = "tax_amount")
-    private double taxAmount;
+    private Double taxAmount;
 
     private double total;
 

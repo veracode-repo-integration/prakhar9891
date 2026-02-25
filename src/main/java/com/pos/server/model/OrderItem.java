@@ -25,13 +25,13 @@ public class OrderItem {
 
     // Tax Details
     @Column(name = "tax_rate")
-    private double taxRate;
+    private Double taxRate;
 
     @Column(name = "tax_amount")
-    private double taxAmount;
+    private Double taxAmount;
 
     @Column(name = "taxable_value")
-    private double taxableValue;
+    private Double taxableValue;
 
     // Simplified modifiers storage to avoid join complexity and LOB issues
     @Column(name = "modifiers_json", columnDefinition = "TEXT")
