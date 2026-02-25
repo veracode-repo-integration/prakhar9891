@@ -116,16 +116,33 @@ public class SuperAdminController {
             stats.put("activeRestaurants", all.stream().filter(r -> "ACTIVE".equals(r.getStatus())).count());
             stats.put("totalUsers", allUsers.size());
 
-            // Estimated Revenue
-            long monthlyRevenue = all.stream().mapToLong(r -> {
+            // Pricing (base, excl. GST)
+            final double PRO_PRICE = 333.33;
+            final double BASIC_PRICE = 222.00;
+            final double GST_RATE = 0.18;
+
+            double monthlyBase = all.stream().mapToDouble(r -> {
                 if ("PRO".equalsIgnoreCase(r.getPlanName()))
-                    return 2999;
+                    return PRO_PRICE;
                 if ("BASIC".equalsIgnoreCase(r.getPlanName()))
-                    return 999;
+                    return BASIC_PRICE;
                 return 0;
             }).sum();
 
-            stats.put("monthlyRevenue", monthlyRevenue);
+            double gstAmount = monthlyBase * GST_RATE;
+            double monthlyGross = monthlyBase + gstAmount; // what customer pays
+            double yearlyBase = monthlyBase * 12;
+            double yearlyGross = monthlyGross * 12;
+
+            Map<String, Object> revenue = new java.util.HashMap<>();
+            revenue.put("monthlyBase", Math.round(monthlyBase * 100.0) / 100.0);
+            revenue.put("monthlyGST", Math.round(gstAmount * 100.0) / 100.0);
+            revenue.put("monthlyGross", Math.round(monthlyGross * 100.0) / 100.0);
+            revenue.put("yearlyBase", Math.round(yearlyBase * 100.0) / 100.0);
+            revenue.put("yearlyGross", Math.round(yearlyGross * 100.0) / 100.0);
+
+            stats.put("monthlyRevenue", (long) monthlyBase); // kept for backwards compat
+            stats.put("revenueDetail", revenue);
 
             // Plan Breakup
             Map<String, Long> plans = all.stream()
