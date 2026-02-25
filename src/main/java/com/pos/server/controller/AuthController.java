@@ -25,6 +25,26 @@ public class AuthController {
     @Autowired
     private com.pos.server.repository.RestaurantRepository restaurantRepository;
 
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe(org.springframework.security.core.Authentication auth) {
+        if (auth == null)
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+
+        Map<String, Object> details = new java.util.HashMap<>();
+        details.put("username", auth.getName());
+        details.put("authorities", auth.getAuthorities());
+
+        try {
+            User user = authService.findByUsername(auth.getName());
+            if (user != null) {
+                details.put("dbRole", user.getRole());
+            }
+        } catch (Exception e) {
+        }
+
+        return ResponseEntity.ok(details);
+    }
+
     private com.pos.server.dto.UserResponse createUserResponse(User user) {
         java.util.List<String> allowedFeatures = new java.util.ArrayList<>();
         if (user.getRestaurantId() != null) {
