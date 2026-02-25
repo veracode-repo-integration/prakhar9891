@@ -62,7 +62,7 @@ public class DineInController {
         // 2. Validate Location (Use restaurant-specific settings)
         Optional<Settings> settingsOpt = (restaurantId == null || restaurantId.trim().isEmpty())
                 ? settingsRepository.findById("default")
-                : settingsRepository.findByRestaurantId(restaurantId.toLowerCase().trim());
+                : settingsRepository.findFirstByRestaurantId(restaurantId.toLowerCase().trim());
 
         if (settingsOpt.isPresent()) {
             Settings settings = settingsOpt.get();

@@ -30,7 +30,7 @@ public class CommonDataService {
         }
         String rid = restaurantId.toLowerCase().trim();
         System.out.println("[CommonDataService] Looking up customer by mobile: " + mobile + " for restaurant: " + rid);
-        return customerRepository.findByMobileAndRestaurantId(mobile, rid);
+        return customerRepository.findFirstByMobileAndRestaurantId(mobile, rid);
     }
 
     // Customers
@@ -78,7 +78,7 @@ public class CommonDataService {
             return new Settings();
         }
         try {
-            return settingsRepository.findByRestaurantId(restaurantId).orElseGet(() -> {
+            return settingsRepository.findFirstByRestaurantId(restaurantId).orElseGet(() -> {
                 Settings s = new Settings();
                 s.setRestaurantId(restaurantId);
                 s.setId(UUID.randomUUID().toString());
@@ -98,7 +98,7 @@ public class CommonDataService {
             s.setRestaurantId(rid);
             try {
                 // Ensure we update the existing one for this restaurant if it exists
-                settingsRepository.findByRestaurantId(rid).ifPresent(existing -> s.setId(existing.getId()));
+                settingsRepository.findFirstByRestaurantId(rid).ifPresent(existing -> s.setId(existing.getId()));
                 return settingsRepository.save(s);
             } catch (Exception e) {
                 System.err.println("[Emergency] Settings Update failure: " + e.getMessage());

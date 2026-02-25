@@ -181,7 +181,8 @@ public class OrderService {
                 if (mobile != null && !mobile.trim().isEmpty()) {
                     String normMobile = mobile.trim();
                     log.info("Linking customer with mobile: {} to order: {}", normMobile, order.getId());
-                    Customer customer = customerRepository.findByMobileAndRestaurantId(normMobile, rid).orElse(null);
+                    Customer customer = customerRepository.findFirstByMobileAndRestaurantId(normMobile, rid)
+                            .orElse(null);
 
                     if (customer != null) {
                         log.info("Found existing customer ID: {} for mobile: {}", customer.getId(), normMobile);
