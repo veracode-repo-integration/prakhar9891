@@ -28,9 +28,10 @@ public class AuthService {
             boolean isSuperAdmin = java.util.Arrays.stream(superAdminPhones.split(","))
                     .map(p -> p.replaceAll("\\D", ""))
                     .anyMatch(p -> p.equals(cleanPhone) || cleanPhone.endsWith(p));
-            if (isSuperAdmin && !"SUPER_ADMIN".equals(user.getRole())) {
+            if (isSuperAdmin) {
                 user.setRole("SUPER_ADMIN");
-                return userRepository.save(user); // Force role upgrade and save
+                // DO NOT save to repository. This role is transient for the session.
+                return user;
             }
         }
         return user;
@@ -63,6 +64,12 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
+                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for
+                // normal login
+                if ("SUPER_ADMIN".equals(user.getRole())) {
+                    user.setRole("ADMIN");
+                    userRepository.save(user);
+                }
                 return user;
             }
         }

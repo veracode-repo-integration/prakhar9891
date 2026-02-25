@@ -55,7 +55,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody com.pos.server.dto.RegisterRequest request) {
         try {
             User user = authService.register(request);
-            String token = jwtUtils.generateToken(user.getUsername());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -72,7 +72,7 @@ public class AuthController {
         try {
             // identifier, passwordHash (raw password from frontend)
             User user = authService.login(request.getIdentifier(), request.getPasswordHash());
-            String token = jwtUtils.generateToken(user.getUsername());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -91,7 +91,7 @@ public class AuthController {
             String restaurantId = request.get("restaurantId");
             String name = request.get("name");
             User user = authService.loginByPhone(phone, restaurantId, name);
-            String token = jwtUtils.generateToken(user.getUsername());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -109,8 +109,13 @@ public class AuthController {
             org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                     .getContext().getAuthentication();
             String username = auth.getName();
+            String sessionRole = auth.getAuthorities().stream()
+                    .map(a -> a.getAuthority().replace("ROLE_", ""))
+                    .findFirst().orElse("STAFF");
 
             User user = authService.findByUsername(username);
+            // Override user role with session role from JWT
+            user.setRole(sessionRole);
 
             return ResponseEntity.ok(createUserResponse(user));
         } catch (Exception e) {
