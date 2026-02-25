@@ -20,7 +20,7 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210}")
+    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
     private String superAdminPhones;
 
     private User assignSuperAdminIfApplicable(User user, String cleanPhone) {
