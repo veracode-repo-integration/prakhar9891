@@ -34,7 +34,16 @@ public class Restaurant {
     private Long trialEndDate; // Unix timestamp when trial expires
 
     @Column(name = "subscription_note", columnDefinition = "TEXT")
-    private String subscriptionNote; // Admin notes (payment method, contact, etc.)
+    private String subscriptionNote; // Admin notes
+
+    @Column(name = "subscription_months")
+    private Integer subscriptionMonths; // Duration of last paid subscription (1,2,3,6,12)
+
+    @Column(name = "amount_paid")
+    private Double amountPaid; // Actual amount received (base excl. GST)
+
+    @Column(name = "amount_paid_with_gst")
+    private Double amountPaidWithGst; // Actual amount received (incl. GST)
 
     @Column(name = "allowed_features", columnDefinition = "TEXT")
     private String allowedFeaturesJson;

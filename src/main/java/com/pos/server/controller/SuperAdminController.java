@@ -121,18 +121,40 @@ public class SuperAdminController {
             final double BASIC_PRICE = 222.00;
             final double GST_RATE = 0.18;
 
-            double monthlyBase = all.stream().mapToDouble(r -> {
-                if ("PRO".equalsIgnoreCase(r.getPlanName()))
-                    return PRO_PRICE;
-                if ("BASIC".equalsIgnoreCase(r.getPlanName()))
-                    return BASIC_PRICE;
-                return 0;
-            }).sum();
+            // Monthly revenue from stores with ACTUAL payment data (prorated)
+            double actualMonthlyBase = all.stream()
+                    .filter(r -> r.getAmountPaid() != null
+                            && r.getSubscriptionMonths() != null
+                            && r.getSubscriptionMonths() > 0)
+                    .mapToDouble(r -> r.getAmountPaid() / r.getSubscriptionMonths())
+                    .sum();
 
+            // Estimated monthly for stores with NO payment data yet (plan-based)
+            double estimatedMonthlyBase = all.stream()
+                    .filter(r -> r.getAmountPaid() == null || r.getSubscriptionMonths() == null)
+                    .mapToDouble(r -> {
+                        if ("PRO".equalsIgnoreCase(r.getPlanName()))
+                            return PRO_PRICE;
+                        if ("BASIC".equalsIgnoreCase(r.getPlanName()))
+                            return BASIC_PRICE;
+                        return 0;
+                    }).sum();
+
+            double monthlyBase = actualMonthlyBase + estimatedMonthlyBase;
             double gstAmount = monthlyBase * GST_RATE;
-            double monthlyGross = monthlyBase + gstAmount; // what customer pays
+            double monthlyGross = monthlyBase + gstAmount;
             double yearlyBase = monthlyBase * 12;
             double yearlyGross = monthlyGross * 12;
+
+            // Total actually collected (base, excl. GST) across all stores
+            double totalCollected = all.stream()
+                    .filter(r -> r.getAmountPaid() != null)
+                    .mapToDouble(Restaurant::getAmountPaid)
+                    .sum();
+            double totalCollectedWithGst = all.stream()
+                    .filter(r -> r.getAmountPaidWithGst() != null)
+                    .mapToDouble(Restaurant::getAmountPaidWithGst)
+                    .sum();
 
             Map<String, Object> revenue = new java.util.HashMap<>();
             revenue.put("monthlyBase", Math.round(monthlyBase * 100.0) / 100.0);
@@ -140,8 +162,10 @@ public class SuperAdminController {
             revenue.put("monthlyGross", Math.round(monthlyGross * 100.0) / 100.0);
             revenue.put("yearlyBase", Math.round(yearlyBase * 100.0) / 100.0);
             revenue.put("yearlyGross", Math.round(yearlyGross * 100.0) / 100.0);
+            revenue.put("totalCollected", Math.round(totalCollected * 100.0) / 100.0);
+            revenue.put("totalCollectedWithGst", Math.round(totalCollectedWithGst * 100.0) / 100.0);
 
-            stats.put("monthlyRevenue", (long) monthlyBase); // kept for backwards compat
+            stats.put("monthlyRevenue", (long) monthlyBase); // backwards compat
             stats.put("revenueDetail", revenue);
 
             // Plan Breakup
@@ -233,6 +257,18 @@ public class SuperAdminController {
             }
             if (updates.containsKey("subscriptionNote")) {
                 r.setSubscriptionNote((String) updates.get("subscriptionNote"));
+            }
+            if (updates.containsKey("subscriptionMonths")) {
+                Object v = updates.get("subscriptionMonths");
+                r.setSubscriptionMonths(v instanceof Number ? ((Number) v).intValue() : null);
+            }
+            if (updates.containsKey("amountPaid")) {
+                Object v = updates.get("amountPaid");
+                r.setAmountPaid(v instanceof Number ? ((Number) v).doubleValue() : null);
+            }
+            if (updates.containsKey("amountPaidWithGst")) {
+                Object v = updates.get("amountPaidWithGst");
+                r.setAmountPaidWithGst(v instanceof Number ? ((Number) v).doubleValue() : null);
             }
 
             if (updates.containsKey("allowedFeatures")) {
