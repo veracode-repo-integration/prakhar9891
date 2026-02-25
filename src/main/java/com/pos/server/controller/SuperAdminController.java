@@ -98,6 +98,22 @@ public class SuperAdminController {
                     restaurants.add(placeholder);
                 }
             }
+
+            // Also fix names for DB restaurants that have a null/blank name
+            for (Restaurant r : restaurants) {
+                if (r.getName() == null || r.getName().isBlank()) {
+                    List<User> rUsers = usersByRestaurant.getOrDefault(r.getId(), java.util.Collections.emptyList());
+                    Optional<User> admin = rUsers.stream()
+                            .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).findFirst();
+                    if (admin.isPresent() && admin.get().getFirstName() != null
+                            && !admin.get().getFirstName().isBlank()) {
+                        r.setName(admin.get().getFirstName() + "'s Store");
+                    } else if (!rUsers.isEmpty() && rUsers.get(0).getFirstName() != null) {
+                        r.setName(rUsers.get(0).getFirstName() + "'s Store");
+                    }
+                }
+            }
+
             return ResponseEntity.ok(restaurants);
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
@@ -187,7 +203,21 @@ public class SuperAdminController {
             validateSuperAdmin();
             Optional<Restaurant> restaurantOpt = restaurantRepository.findById(id);
             if (restaurantOpt.isPresent()) {
-                return ResponseEntity.ok(restaurantOpt.get());
+                Restaurant r = restaurantOpt.get();
+                // If name is missing, derive from admin user (happens for inferred stores saved
+                // without a name)
+                if (r.getName() == null || r.getName().isBlank()) {
+                    List<User> users = userRepository.findAllByRestaurantId(id);
+                    Optional<User> admin = users.stream()
+                            .filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).findFirst();
+                    if (admin.isPresent() && admin.get().getFirstName() != null
+                            && !admin.get().getFirstName().isBlank()) {
+                        r.setName(admin.get().getFirstName() + "'s Store");
+                    } else if (!users.isEmpty() && users.get(0).getFirstName() != null) {
+                        r.setName(users.get(0).getFirstName() + "'s Store");
+                    }
+                }
+                return ResponseEntity.ok(r);
             }
 
             // Discovery Fallback - use admin's name if available
