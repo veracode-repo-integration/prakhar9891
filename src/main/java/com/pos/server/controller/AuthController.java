@@ -22,6 +22,29 @@ public class AuthController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private com.pos.server.repository.RestaurantRepository restaurantRepository;
+
+    private com.pos.server.dto.UserResponse createUserResponse(User user) {
+        java.util.List<String> allowedFeatures = new java.util.ArrayList<>();
+        if (user.getRestaurantId() != null) {
+            restaurantRepository.findById(user.getRestaurantId()).ifPresent(r -> {
+                if (r.getAllowedFeatures() != null) {
+                    allowedFeatures.addAll(r.getAllowedFeatures());
+                }
+            });
+        }
+        return new com.pos.server.dto.UserResponse(
+                user.getDbId(),
+                user.getUsername(),
+                (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
+                user.getEmail(),
+                user.getContact(),
+                user.getRole(),
+                user.getRestaurantId(),
+                allowedFeatures);
+    }
+
     @GetMapping("/check-user")
     public ResponseEntity<?> checkUser(@RequestParam String phone) {
         boolean exists = authService.checkUserExistsByPhone(phone);
@@ -37,14 +60,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
             response.put("token", token);
-            response.put("user", new com.pos.server.dto.UserResponse(
-                    user.getDbId(),
-                    user.getUsername(),
-                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
-                    user.getEmail(),
-                    user.getContact(),
-                    user.getRole(),
-                    user.getRestaurantId()));
+            response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
@@ -61,14 +77,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
             response.put("token", token);
-            response.put("user", new com.pos.server.dto.UserResponse(
-                    user.getDbId(),
-                    user.getUsername(),
-                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
-                    user.getEmail(),
-                    user.getContact(),
-                    user.getRole(),
-                    user.getRestaurantId()));
+            response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
@@ -87,14 +96,7 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
             response.put("token", token);
-            response.put("user", new com.pos.server.dto.UserResponse(
-                    user.getDbId(),
-                    user.getUsername(),
-                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
-                    user.getEmail(),
-                    user.getContact(),
-                    user.getRole(),
-                    user.getRestaurantId()));
+            response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", e.getMessage()));
@@ -110,14 +112,7 @@ public class AuthController {
 
             User user = authService.findByUsername(username);
 
-            return ResponseEntity.ok(new com.pos.server.dto.UserResponse(
-                    user.getDbId(),
-                    user.getUsername(),
-                    (user.getFirstName() != null ? user.getFirstName() : user.getUsername()),
-                    user.getEmail(),
-                    user.getContact(),
-                    user.getRole(),
-                    user.getRestaurantId()));
+            return ResponseEntity.ok(createUserResponse(user));
         } catch (Exception e) {
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Unauthorized"));
         }

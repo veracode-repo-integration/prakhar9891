@@ -48,8 +48,9 @@ public class Restaurant {
     @PreUpdate
     private void saveFeatures() {
         try {
-            if (this.allowedFeatures == null) {
-                this.allowedFeatures = new java.util.ArrayList<>();
+            if (this.allowedFeatures == null || this.allowedFeatures.isEmpty()) {
+                this.allowedFeatures = new java.util.ArrayList<>(java.util.Arrays.asList(
+                        "POS", "ORDERS", "KITCHEN", "EXPENSES", "CUSTOMERS", "REPORTS", "TABLES"));
             }
             this.allowedFeaturesJson = new com.fasterxml.jackson.databind.ObjectMapper()
                     .writeValueAsString(allowedFeatures);

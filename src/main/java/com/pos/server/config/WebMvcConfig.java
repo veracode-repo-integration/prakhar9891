@@ -9,10 +9,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  */
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.pos.server.security.FeatureGuardInterceptor featureGuardInterceptor;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Serve files from the 'uploads' directory at '/uploads/**'
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:uploads/");
+    }
+
+    @Override
+    public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+        registry.addInterceptor(featureGuardInterceptor).addPathPatterns("/api/**");
     }
 }
