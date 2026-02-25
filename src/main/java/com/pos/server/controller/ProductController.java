@@ -47,14 +47,20 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteProduct(@PathVariable String id) {
-        // For strict security, we should check if the product belongs to the user's
-        // restaurant
-        // But for now, ensuring the user is a valid authenticated user (via
-        // SecurityConfig) is step 1.
-        // Step 2: verify ownership (omitted for brevity unless requested, but
-        // recommended)
-        productService.deleteProduct(id);
+    public ResponseEntity<?> deleteProduct(@PathVariable String id,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        // Security: Validate ownership before deleting
+        String rid = validateRestaurantAccess(restaurantId);
+        if (rid != null) {
+            // Only delete if the product belongs to this restaurant
+            boolean deleted = productService.deleteProductByIdAndRestaurantId(id, rid);
+            if (!deleted) {
+                return ResponseEntity.status(404)
+                        .body(Map.of("ok", false, "message", "Product not found or access denied"));
+            }
+        } else {
+            productService.deleteProduct(id);
+        }
         return ResponseEntity.ok(Map.of("ok", true));
     }
 

@@ -105,6 +105,13 @@ public class ProductService {
         productRepository.deleteById(id);
     }
 
+    public boolean deleteProductByIdAndRestaurantId(String id, String restaurantId) {
+        return productRepository.findByIdAndRestaurantId(id, restaurantId).map(product -> {
+            productRepository.delete(product);
+            return true;
+        }).orElse(false);
+    }
+
     public Optional<Product> getProduct(String id) {
         return productRepository.findById(id);
     }
