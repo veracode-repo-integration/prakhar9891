@@ -64,14 +64,11 @@ public class SuperAdminController {
     public ResponseEntity<?> getAllRestaurants() {
         try {
             validateSuperAdmin();
-
-            // 1. Get managed restaurants from DB
             List<Restaurant> restaurants = restaurantRepository.findAll();
             java.util.Set<String> existingIds = restaurants.stream()
                     .map(Restaurant::getId)
                     .collect(java.util.stream.Collectors.toSet());
 
-            // 2. Discover "Implicit" restaurants from Users table
             java.util.List<User> allUsers = userRepository.findAll();
             java.util.Map<String, List<User>> usersByRestaurant = allUsers.stream()
                     .filter(u -> u.getRestaurantId() != null && !u.getRestaurantId().trim().isEmpty())
@@ -79,30 +76,59 @@ public class SuperAdminController {
 
             for (String rid : usersByRestaurant.keySet()) {
                 if (!existingIds.contains(rid)) {
-                    // Create a transient placeholder for display
                     Restaurant placeholder = new Restaurant();
                     placeholder.setId(rid);
                     placeholder.setName(rid.substring(0, 1).toUpperCase() + rid.substring(1) + " (Inferred)");
                     placeholder.setStatus("ACTIVE");
                     placeholder.setPlanName("TRIAL");
 
-                    // Try to pick a name from one of the users
                     List<User> rUsers = usersByRestaurant.get(rid);
                     Optional<User> admin = rUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
                             .findFirst();
                     if (admin.isPresent()) {
                         placeholder.setPhone(admin.get().getContact());
                         placeholder.setEmail(admin.get().getEmail());
-                        if (admin.get().getFirstName() != null) {
-                            placeholder.setName(admin.get().getFirstName() + "'s Shop");
-                        }
                     }
-
                     restaurants.add(placeholder);
                 }
             }
-
             return ResponseEntity.ok(restaurants);
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats() {
+        try {
+            validateSuperAdmin();
+            List<Restaurant> all = restaurantRepository.findAll();
+            List<User> allUsers = userRepository.findAll();
+
+            Map<String, Object> stats = new java.util.HashMap<>();
+            stats.put("totalRestaurants", all.size());
+            stats.put("activeRestaurants", all.stream().filter(r -> "ACTIVE".equals(r.getStatus())).count());
+            stats.put("totalUsers", allUsers.size());
+
+            // Estimated Revenue
+            long monthlyRevenue = all.stream().mapToLong(r -> {
+                if ("PRO".equalsIgnoreCase(r.getPlanName()))
+                    return 2999;
+                if ("BASIC".equalsIgnoreCase(r.getPlanName()))
+                    return 999;
+                return 0;
+            }).sum();
+
+            stats.put("monthlyRevenue", monthlyRevenue);
+
+            // Plan Breakup
+            Map<String, Long> plans = all.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            r -> r.getPlanName() != null ? r.getPlanName() : "FREE",
+                            java.util.stream.Collectors.counting()));
+            stats.put("planBreakup", plans);
+
+            return ResponseEntity.ok(stats);
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
