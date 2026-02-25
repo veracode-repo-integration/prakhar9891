@@ -21,13 +21,13 @@ public class CreditNote {
 
     private String mobile;
 
-    private double amount;
+    private Double amount;
     private String reason;
 
     // Timestamps
     private String createdAt; // ISO string
     private String usedAt; // ISO string
-    private long date; // Timestamp (for backward compatibility)
+    private Long date; // Timestamp (for backward compatibility)
 
     // Status
     private boolean isUsed = false;

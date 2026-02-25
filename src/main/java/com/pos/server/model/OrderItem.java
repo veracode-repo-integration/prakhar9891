@@ -23,6 +23,16 @@ public class OrderItem {
     @Column(name = "cart_id")
     private String cartId; // Unique ID for variant/modifier combo
 
+    // Tax Details
+    @Column(name = "tax_rate")
+    private Double taxRate;
+
+    @Column(name = "tax_amount")
+    private Double taxAmount;
+
+    @Column(name = "taxable_value")
+    private Double taxableValue;
+
     // Simplified modifiers storage to avoid join complexity and LOB issues
     @Column(name = "modifiers_json", columnDefinition = "TEXT")
     private String modifiersJson;

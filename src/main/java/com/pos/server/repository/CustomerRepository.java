@@ -11,5 +11,9 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     List<Customer> findAllByRestaurantId(String restaurantId);
 
-    java.util.Optional<Customer> findByMobileAndRestaurantId(String mobile, String restaurantId);
+    // findFirst is resilient to duplicate rows — prevents NonUniqueResultException
+    java.util.Optional<Customer> findFirstByMobileAndRestaurantId(String mobile, String restaurantId);
+
+    // Keep list version for deduplication utilities
+    java.util.List<Customer> findAllByMobileAndRestaurantId(String mobile, String restaurantId);
 }

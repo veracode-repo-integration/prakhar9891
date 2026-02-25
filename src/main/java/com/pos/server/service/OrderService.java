@@ -55,13 +55,14 @@ public class OrderService {
         return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
     }
 
-    public org.springframework.data.domain.Page<Order> getOrdersPaginated(String restaurantId, int page, int size) {
+    public org.springframework.data.domain.Page<Order> getOrdersPaged(String restaurantId, int page, int size) {
+        log.info("Fetching orders V2 for restaurant: {}, page: {}, size: {}", restaurantId, page, size);
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return org.springframework.data.domain.Page.empty();
         }
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
-                org.springframework.data.domain.Sort.by("date").descending());
-        return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim(), pageable);
+        org.springframework.data.domain.Pageable p = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by("createdAt").descending());
+        return orderRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim(), p);
     }
 
     @Transactional
@@ -181,7 +182,8 @@ public class OrderService {
                 if (mobile != null && !mobile.trim().isEmpty()) {
                     String normMobile = mobile.trim();
                     log.info("Linking customer with mobile: {} to order: {}", normMobile, order.getId());
-                    Customer customer = customerRepository.findByMobileAndRestaurantId(normMobile, rid).orElse(null);
+                    Customer customer = customerRepository.findFirstByMobileAndRestaurantId(normMobile, rid)
+                            .orElse(null);
 
                     if (customer != null) {
                         log.info("Found existing customer ID: {} for mobile: {}", customer.getId(), normMobile);
@@ -237,10 +239,17 @@ public class OrderService {
         Order savedOrder = orderRepository.saveAndFlush(order);
 
         // --- VACATE TABLE IF DINE-IN ---
+        // --- VACATE TABLE IF DINE-IN ---
         if (request.getTableId() != null && !request.getTableId().isEmpty()) {
-            Optional<RestaurantTable> tOpt = tableRepository.findByIdAndRestaurantId(request.getTableId(), rid);
+            List<RestaurantTable> tables = tableRepository.findAllByIdAndRestaurantId(request.getTableId(), rid);
 
-            tOpt.ifPresent(table -> {
+            if (!tables.isEmpty()) {
+                RestaurantTable table = tables.get(0); // Take the first one if duplicates exist
+                if (tables.size() > 1) {
+                    log.warn("Found {} duplicate tables for ID {} in restaurant {}. Using first result.", tables.size(),
+                            request.getTableId(), rid);
+                }
+
                 table.setStatus("available");
                 table.setCurrentOrder(null);
                 table.setGuestCount(0);
@@ -248,7 +257,9 @@ public class OrderService {
                 table.setKitchenStatus(null);
                 tableRepository.save(table);
                 log.info("Table {} vacated successfully after checkout", request.getTableId());
-            });
+            } else {
+                log.warn("Table {} not found for vacating after checkout in restaurant {}", request.getTableId(), rid);
+            }
         }
 
         // --- ADD TO CREDIT LEDGER IF PAY LATER ---

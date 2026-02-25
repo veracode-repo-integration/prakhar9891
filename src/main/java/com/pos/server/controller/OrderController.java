@@ -32,12 +32,12 @@ public class OrderController {
     }
 
     @GetMapping("/v2/pos-orders")
-    public org.springframework.data.domain.Page<Order> getOrdersV2(
-            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId,
+    public org.springframework.data.domain.Page<Order> getOrdersPaged(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         String rid = validateRestaurantAccess(restaurantId);
-        return orderService.getOrdersPaginated(rid, page, size);
+        return orderService.getOrdersPaged(rid, page, size);
     }
 
     @PostMapping("/checkout")

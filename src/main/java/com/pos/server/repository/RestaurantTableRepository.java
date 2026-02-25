@@ -20,5 +20,8 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
 
     Optional<RestaurantTable> findByIdAndRestaurantId(String id, String restaurantId);
 
+    // Fix for NonUniqueResultException if dirty data exists
+    List<RestaurantTable> findAllByIdAndRestaurantId(String id, String restaurantId);
+
     Optional<RestaurantTable> findByNameAndRestaurantId(String name, String restaurantId);
 }

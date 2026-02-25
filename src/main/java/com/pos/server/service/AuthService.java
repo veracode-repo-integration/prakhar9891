@@ -126,6 +126,21 @@ public class AuthService {
             return savedUser;
         }
 
-        throw new RuntimeException("Account not found. Please sign up first.");
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        }
+
+        // Auto-Register New User
+        User newUser = new User();
+        newUser.setUsername(phone);
+        newUser.setContact(phone);
+        // Default to ADMIN so they can setup their shop
+        newUser.setRole("ADMIN");
+        // Use phone as default Restaurant ID (Unique & Memorable)
+        newUser.setRestaurantId(phone);
+        // Set a random password since they used OTP
+        newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+
+        return userRepository.save(newUser);
     }
 }

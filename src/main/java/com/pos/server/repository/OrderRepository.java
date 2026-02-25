@@ -9,6 +9,9 @@ import java.util.List;
 public interface OrderRepository extends JpaRepository<Order, String> {
     List<Order> findAllByRestaurantId(String restaurantId);
 
+    org.springframework.data.domain.Page<Order> findAllByRestaurantId(String restaurantId,
+            org.springframework.data.domain.Pageable pageable);
+
     java.util.Optional<Order> findByIdAndRestaurantId(String id, String restaurantId);
 
     org.springframework.data.domain.Page<Order> findAllByRestaurantId(String restaurantId,
