@@ -202,6 +202,22 @@ public class SuperAdminController {
                 }
             }
 
+            if (updates.containsKey("lastPaidDate")) {
+                Object v = updates.get("lastPaidDate");
+                r.setLastPaidDate(v instanceof Number ? ((Number) v).longValue() : null);
+            }
+            if (updates.containsKey("nextDueDate")) {
+                Object v = updates.get("nextDueDate");
+                r.setNextDueDate(v instanceof Number ? ((Number) v).longValue() : null);
+            }
+            if (updates.containsKey("trialEndDate")) {
+                Object v = updates.get("trialEndDate");
+                r.setTrialEndDate(v instanceof Number ? ((Number) v).longValue() : null);
+            }
+            if (updates.containsKey("subscriptionNote")) {
+                r.setSubscriptionNote((String) updates.get("subscriptionNote"));
+            }
+
             if (updates.containsKey("allowedFeatures")) {
                 r.setAllowedFeatures((List<String>) updates.get("allowedFeatures"));
             }

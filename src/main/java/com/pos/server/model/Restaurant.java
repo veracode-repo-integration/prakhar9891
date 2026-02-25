@@ -24,6 +24,18 @@ public class Restaurant {
     @Column(name = "subscription_end_date")
     private Long subscriptionEndDate; // Unix timestamp
 
+    @Column(name = "last_paid_date")
+    private Long lastPaidDate; // Unix timestamp of last manual payment
+
+    @Column(name = "next_due_date")
+    private Long nextDueDate; // Unix timestamp of next renewal due
+
+    @Column(name = "trial_end_date")
+    private Long trialEndDate; // Unix timestamp when trial expires
+
+    @Column(name = "subscription_note", columnDefinition = "TEXT")
+    private String subscriptionNote; // Admin notes (payment method, contact, etc.)
+
     @Column(name = "allowed_features", columnDefinition = "TEXT")
     private String allowedFeaturesJson;
 
