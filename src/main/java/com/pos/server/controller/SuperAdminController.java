@@ -78,13 +78,19 @@ public class SuperAdminController {
                 if (!existingIds.contains(rid)) {
                     Restaurant placeholder = new Restaurant();
                     placeholder.setId(rid);
-                    placeholder.setName(rid.substring(0, 1).toUpperCase() + rid.substring(1) + " (Inferred)");
-                    placeholder.setStatus("ACTIVE");
-                    placeholder.setPlanName("TRIAL");
-
+                    // Use admin user's name if available, else just the raw ID
+                    String displayName = rid;
                     List<User> rUsers = usersByRestaurant.get(rid);
                     Optional<User> admin = rUsers.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole()))
                             .findFirst();
+                    if (admin.isPresent() && admin.get().getFirstName() != null
+                            && !admin.get().getFirstName().isEmpty()) {
+                        displayName = admin.get().getFirstName() + "'s Store";
+                    }
+                    placeholder.setName(displayName);
+                    placeholder.setStatus("ACTIVE");
+                    placeholder.setPlanName("TRIAL");
+
                     if (admin.isPresent()) {
                         placeholder.setPhone(admin.get().getContact());
                         placeholder.setEmail(admin.get().getEmail());
@@ -143,12 +149,19 @@ public class SuperAdminController {
                 return ResponseEntity.ok(restaurantOpt.get());
             }
 
-            // Discovery Fallback
+            // Discovery Fallback - use admin's name if available
             List<User> users = userRepository.findAllByRestaurantId(id);
             if (!users.isEmpty()) {
                 Restaurant placeholder = new Restaurant();
                 placeholder.setId(id);
-                placeholder.setName(id + " (Found in Users)");
+                String displayName = id;
+                Optional<User> admin = users.stream().filter(u -> "ADMIN".equalsIgnoreCase(u.getRole())).findFirst();
+                if (admin.isPresent() && admin.get().getFirstName() != null && !admin.get().getFirstName().isEmpty()) {
+                    displayName = admin.get().getFirstName() + "'s Store";
+                    placeholder.setPhone(admin.get().getContact());
+                    placeholder.setEmail(admin.get().getEmail());
+                }
+                placeholder.setName(displayName);
                 return ResponseEntity.ok(placeholder);
             }
 
