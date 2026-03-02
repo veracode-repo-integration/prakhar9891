@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PROJECT_ID: udhyog-khaata
+  PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
   SERVICE_NAME: pos-backend
 
@@ -34,18 +34,18 @@ jobs:
 
       - name: Build and Push Container
         run: |-
-          docker build -t us-central1-docker.pkg.dev/udhyog-khaata/pos-repo/pos-backend:${{ github.sha }} .
-          docker push us-central1-docker.pkg.dev/udhyog-khaata/pos-repo/pos-backend:${{ github.sha }}
+          docker build -t us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} .
+          docker push us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }}
 
       - name: Deploy to Cloud Run
         run: |-
           gcloud run deploy pos-backend \
-            --image us-central1-docker.pkg.dev/udhyog-khaata/pos-repo/pos-backend:${{ github.sha }} \
+            --image us-central1-docker.pkg.dev/udhyog-khaata-pos/pos-repo/pos-backend:${{ github.sha }} \
             --region us-central1 \
-            --set-cloudsql-instances=udhyog-khaata:us-central1:pos-db-instance \
+            --set-cloudsql-instances=udhyog-khaata-pos:us-central1:pos-db-instance \
             --memory=1Gi \
             --cpu=1 \
             --port=4000 \
             --timeout=600s \
             --allow-unauthenticated \
-            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata,GCP_BUCKET_NAME=pos-system-images-99"
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
