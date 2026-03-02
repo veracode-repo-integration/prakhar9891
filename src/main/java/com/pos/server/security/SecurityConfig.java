@@ -77,7 +77,11 @@ public class SecurityConfig {
 
         // Use configured origins
         if (allowedOrigins != null && !allowedOrigins.equals("*") && !allowedOrigins.isEmpty()) {
-            configuration.setAllowedOrigins(java.util.Arrays.asList(allowedOrigins.split(",")));
+            java.util.List<String> origins = java.util.Arrays.stream(allowedOrigins.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+            configuration.setAllowedOriginPatterns(origins);
         } else {
             // In production, NEVER use setAllowedOriginPatterns("*")
             // Set this to your frontend URL in application.properties
