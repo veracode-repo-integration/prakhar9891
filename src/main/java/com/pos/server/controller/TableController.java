@@ -26,6 +26,9 @@ public class TableController {
     @Autowired
     private TableService tableService;
 
+    @Autowired
+    private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
     @GetMapping("/tables")
     public ResponseEntity<List<RestaurantTable>> getAllTables(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
@@ -59,7 +62,12 @@ public class TableController {
     public ResponseEntity<?> updateTable(@PathVariable String id, @RequestBody Map<String, Object> updates,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         return tableService.updateTable(id, updates, restaurantId)
-                .map(table -> ResponseEntity.ok(Map.of("ok", true, "table", table)))
+                .map(table -> {
+                    // Notify subscribers about table update (trigger sound alert)
+                    messagingTemplate.convertAndSend("/topic/orders",
+                            Map.of("type", "table_update", "tableId", table.getId()));
+                    return ResponseEntity.ok(Map.of("ok", true, "table", table));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -71,7 +79,12 @@ public class TableController {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Status is required"));
         }
         return tableService.updateTableStatus(id, status, restaurantId)
-                .map(table -> ResponseEntity.ok(Map.of("ok", true, "table", table)))
+                .map(table -> {
+                    // Notify subscribers (triggers sound alert)
+                    messagingTemplate.convertAndSend("/topic/orders",
+                            Map.of("type", "table_status_change", "tableId", table.getId()));
+                    return ResponseEntity.ok(Map.of("ok", true, "table", table));
+                })
                 .orElse(ResponseEntity.notFound().build());
     }
 
