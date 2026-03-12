@@ -1,11 +1,13 @@
 package com.pos.server.service;
 
 import com.pos.server.model.User;
+import com.pos.server.model.Restaurant;
 import com.pos.server.repository.UserRepository;
+import com.pos.server.repository.RestaurantRepository;
+import com.pos.server.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.util.Optional;
 
 @Service
@@ -15,7 +17,10 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
-    private com.pos.server.repository.CustomerRepository customerRepository;
+    private RestaurantRepository restaurantRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -51,7 +56,9 @@ public class AuthService {
         user.setRole(request.getRole() != null ? request.getRole() : "STAFF");
         user.setRestaurantId(request.getRestaurantId() != null ? request.getRestaurantId().toLowerCase().trim() : null);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        checkSubscription(saved);
+        return saved;
     }
 
     public User login(String identifier, String providedPassword) {
@@ -64,12 +71,13 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
-                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for
-                // normal login
+                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for normal login
                 if ("SUPER_ADMIN".equals(user.getRole())) {
                     user.setRole("ADMIN");
                     userRepository.save(user);
                 }
+                
+                checkSubscription(user);
                 return user;
             }
         }
@@ -112,7 +120,9 @@ public class AuthService {
         }
 
         if (userOpt.isPresent()) {
-            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
+            User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
+            checkSubscription(user);
+            return user;
         }
 
         // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
@@ -129,8 +139,7 @@ public class AuthService {
 
             User savedUser = userRepository.save(guest);
 
-            // Also save to Customers table so they appear in the Customers list for the
-            // shopkeeper
+            // Also save to Customers table so they appear in the Customers list for the shopkeeper
             try {
                 if (customerRepository.findFirstByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
                     com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
@@ -145,12 +154,9 @@ public class AuthService {
             } catch (Exception e) {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
-
+            
+            checkSubscription(savedUser);
             return savedUser;
-        }
-
-        if (userOpt.isPresent()) {
-            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
         }
 
         // Auto-Register New User
@@ -164,6 +170,30 @@ public class AuthService {
         // Set a random password since they used OTP
         newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
 
-        return assignSuperAdminIfApplicable(userRepository.save(newUser), cleanPhone);
+        User savedUser = userRepository.save(newUser);
+        User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
+        checkSubscription(finalUser);
+        return finalUser;
+    }
+
+    public void checkSubscription(User user) {
+        if (user == null || user.getRestaurantId() == null || "SUPER_ADMIN".equals(user.getRole())) {
+            return;
+        }
+
+        Optional<Restaurant> restaurantOpt = restaurantRepository.findById(user.getRestaurantId());
+        if (restaurantOpt.isPresent()) {
+            Restaurant r = restaurantOpt.get();
+            if ("SUSPENDED".equalsIgnoreCase(r.getStatus())) {
+                throw new RuntimeException("Your account is suspended. Please connect 9891260801");
+            }
+        }
+    }
+
+    public boolean isRestaurantSuspended(String restaurantId) {
+        if (restaurantId == null || restaurantId.isEmpty()) return false;
+        return restaurantRepository.findById(restaurantId)
+                .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
+                .orElse(false);
     }
 }

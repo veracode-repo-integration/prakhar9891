@@ -74,7 +74,7 @@ public class AuthController {
     public ResponseEntity<?> register(@RequestBody com.pos.server.dto.RegisterRequest request) {
         try {
             User user = authService.register(request);
-            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -82,7 +82,11 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("suspended")) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
+            }
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", msg));
         }
     }
 
@@ -91,7 +95,7 @@ public class AuthController {
         try {
             // identifier, passwordHash (raw password from frontend)
             User user = authService.login(request.getIdentifier(), request.getPasswordHash());
-            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -99,7 +103,11 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("message", "Invalid credentials"));
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("suspended")) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
+            }
+            return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Invalid credentials"));
         }
     }
 
@@ -110,7 +118,7 @@ public class AuthController {
             String restaurantId = request.get("restaurantId");
             String name = request.get("name");
             User user = authService.loginByPhone(phone, restaurantId, name);
-            String token = jwtUtils.generateToken(user.getUsername(), user.getRole());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -118,7 +126,11 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("ok", false, "message", e.getMessage()));
+            String msg = e.getMessage();
+            if (msg != null && msg.contains("suspended")) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
+            }
+            return ResponseEntity.status(401).body(Map.of("ok", false, "message", msg));
         }
     }
 

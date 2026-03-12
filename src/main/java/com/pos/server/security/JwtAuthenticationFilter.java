@@ -24,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private com.pos.server.service.AuthService authService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -41,6 +44,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtUtils.validateToken(token)) {
                 username = jwtUtils.getUsernameFromToken(token);
                 role = jwtUtils.getRoleFromToken(token);
+                String restaurantId = jwtUtils.getRestaurantIdFromToken(token);
+
+                // Subscription Check: Block all non-superadmin requests if restaurant is
+                // suspended
+                if (restaurantId != null && !"SUPER_ADMIN".equals(role)) {
+                    if (authService.isRestaurantSuspended(restaurantId)) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"ok\":false,\"message\":\"Your account is suspended. Please connect 9891260801\"}");
+                        return;
+                    }
+                }
             }
         }
 

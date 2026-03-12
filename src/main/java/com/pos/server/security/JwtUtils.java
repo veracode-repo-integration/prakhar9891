@@ -27,10 +27,11 @@ public class JwtUtils {
         }
     }
 
-    public String generateToken(String username, String role) {
+    public String generateToken(String username, String role, String restaurantId) {
         return Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
+                .claim("restaurantId", restaurantId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(getSigningKey())
@@ -47,6 +48,16 @@ public class JwtUtils {
             Object role = Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
                     .parseClaimsJws(token).getBody().get("role");
             return role != null ? role.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public String getRestaurantIdFromToken(String token) {
+        try {
+            Object rid = Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+                    .parseClaimsJws(token).getBody().get("restaurantId");
+            return rid != null ? rid.toString() : null;
         } catch (Exception e) {
             return null;
         }
