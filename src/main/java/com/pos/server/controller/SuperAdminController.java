@@ -316,7 +316,9 @@ public class SuperAdminController {
     public ResponseEntity<?> getUsersOfRestaurant(@PathVariable String id) {
         try {
             validateSuperAdmin();
-            List<User> users = userRepository.findAllByRestaurantId(id);
+            List<User> users = userRepository.findAllByRestaurantId(id).stream()
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
