@@ -125,7 +125,9 @@ public class SuperAdminController {
         try {
             validateSuperAdmin();
             List<Restaurant> all = restaurantRepository.findAll();
-            List<User> allUsers = userRepository.findAll();
+            List<User> allUsers = userRepository.findAll().stream()
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .collect(java.util.stream.Collectors.toList());
 
             Map<String, Object> stats = new java.util.HashMap<>();
             stats.put("totalRestaurants", all.size());
@@ -317,6 +319,19 @@ public class SuperAdminController {
         try {
             validateSuperAdmin();
             List<User> users = userRepository.findAllByRestaurantId(id).stream()
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            validateSuperAdmin();
+            List<User> users = userRepository.findAll().stream()
                     .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
                     .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(users);
