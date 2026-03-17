@@ -64,8 +64,13 @@ public class TableController {
         return tableService.updateTable(id, updates, restaurantId)
                 .map(table -> {
                     // Notify subscribers about table update (trigger sound alert)
-                    messagingTemplate.convertAndSend("/topic/orders",
-                            Map.of("type", "table_update", "tableId", table.getId()));
+                    String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                    messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                        "type", "table_update", 
+                        "tableId", table.getId(),
+                        "actingUser", actingUser,
+                        "table", table
+                    ));
                     return ResponseEntity.ok(Map.of("ok", true, "table", table));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -81,8 +86,13 @@ public class TableController {
         return tableService.updateTableStatus(id, status, restaurantId)
                 .map(table -> {
                     // Notify subscribers (triggers sound alert)
-                    messagingTemplate.convertAndSend("/topic/orders",
-                            Map.of("type", "table_status_change", "tableId", table.getId()));
+                    String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                    messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                        "type", "table_status_change", 
+                        "tableId", table.getId(),
+                        "actingUser", actingUser,
+                        "table", table
+                    ));
                     return ResponseEntity.ok(Map.of("ok", true, "table", table));
                 })
                 .orElse(ResponseEntity.notFound().build());

@@ -47,8 +47,13 @@ public class OrderController {
             request.setRestaurantId(rid);
 
             Order saved = orderService.processCheckout(request);
-            // Notify subscribers about new order
-            messagingTemplate.convertAndSend("/topic/orders", saved);
+            // Notify subscribers about new order with acting user context
+            String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                "order", saved,
+                "actingUser", actingUser,
+                "type", "NEW_ORDER"
+            ));
             return ResponseEntity.ok(Map.of("ok", true, "order", saved));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
@@ -66,7 +71,12 @@ public class OrderController {
             Order updated = orderService.updateOrder(id, updates, rid);
             if (updated != null) {
                 // Notify subscribers about updated order
-                messagingTemplate.convertAndSend("/topic/orders", updated);
+                String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                    "order", updated,
+                    "actingUser", actingUser,
+                    "type", "ORDER_UPDATE"
+                ));
                 return ResponseEntity.ok(Map.of("ok", true, "order", updated));
             }
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
