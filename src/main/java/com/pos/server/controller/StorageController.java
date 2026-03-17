@@ -15,6 +15,9 @@ public class StorageController {
     @Autowired
     private GCSService gcsService;
 
+    @Autowired
+    private com.pos.server.service.AuthService authService;
+
     /**
      * Request a signed URL for file upload.
      * Expected params: fileName, contentType, folder (default 'general')
@@ -23,13 +26,15 @@ public class StorageController {
     public ResponseEntity<?> getSignedUrl(
             @RequestParam String fileName,
             @RequestParam String contentType,
-            @RequestParam(defaultValue = "general") String folder) {
+            @RequestParam(defaultValue = "general") String folder,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
 
         try {
+            authService.validateRestaurantAccess(restaurantId);
             Map<String, String> response = gcsService.generateSignedUploadUrl(fileName, contentType, folder);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -39,8 +44,10 @@ public class StorageController {
      */
     @PostMapping("/upload")
     public ResponseEntity<?> uploadBase64(
-            @RequestBody Map<String, String> payload) {
+            @RequestBody Map<String, String> payload,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            authService.validateRestaurantAccess(restaurantId);
             String base64 = payload.get("base64");
             String folder = payload.getOrDefault("folder", "general");
 
@@ -51,7 +58,7 @@ public class StorageController {
             String publicUrl = gcsService.uploadBase64Image(base64, folder);
             return ResponseEntity.ok(Map.of("url", publicUrl));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(403).body(Map.of("error", e.getMessage()));
         }
     }
 }

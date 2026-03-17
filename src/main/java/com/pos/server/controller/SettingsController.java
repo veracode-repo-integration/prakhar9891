@@ -31,33 +31,15 @@ public class SettingsController {
     @Autowired
     private CommonDataService commonDataService;
 
-    private String getRestaurantId(String headerId) {
-        if (headerId != null && !headerId.equalsIgnoreCase("null") && !headerId.isEmpty()) {
-            return headerId.toLowerCase().trim();
-        }
-        try {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null)
-                return null;
-            String username = auth.getName();
-            User user = authService.findByUsername(username);
-            return user != null ? user.getRestaurantId() : null;
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     @GetMapping
     public ResponseEntity<?> getSettings(@RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {
-        String restaurantId = getRestaurantId(headerId);
-        if (restaurantId == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized or Restaurant ID missing"));
-        }
-
-        // Use CommonDataService to get the stable legacy settings
-        Settings settings = commonDataService.getSettings(restaurantId);
-
         try {
+            String restaurantId = authService.validateRestaurantAccess(headerId);
+
+            // Use CommonDataService to get the stable legacy settings
+            Settings settings = commonDataService.getSettings(restaurantId);
+
             ObjectNode node;
             if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
                 node = (ObjectNode) objectMapper.readTree(settings.getRawSettingsJson());
@@ -94,12 +76,7 @@ public class SettingsController {
 
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            // Ultimate fallback JSON
-            ObjectNode fallback = objectMapper.createObjectNode();
-            fallback.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
-            fallback.put("taxRate", settings.getTaxRate() != null ? settings.getTaxRate() : 0.0);
-            fallback.put("isTaxInclusive", false);
-            return ResponseEntity.ok(fallback);
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -108,12 +85,8 @@ public class SettingsController {
             @RequestBody ObjectNode settingsNode,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {
 
-        String restaurantId = getRestaurantId(headerId);
-        if (restaurantId == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
-        }
-
         try {
+            String restaurantId = authService.validateRestaurantAccess(headerId);
             Settings settings = commonDataService.getSettings(restaurantId);
 
             if (settingsNode.has("merchantName"))
@@ -161,8 +134,7 @@ public class SettingsController {
 
             return ResponseEntity.ok(Map.of("ok", true, "message", "Settings saved successfully"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("ok", false, "message", "Update failed: " + e.getMessage()));
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }

@@ -23,6 +23,9 @@ public class StockLogController {
     @Autowired
     private StockLogRepository stockLogRepository;
 
+    @Autowired
+    private com.pos.server.service.AuthService authService;
+
     /**
      * Get all stock logs
      * GET /api/stock-logs
@@ -30,10 +33,12 @@ public class StockLogController {
     @GetMapping("/stock-logs")
     public ResponseEntity<List<StockLog>> getAllStockLogs(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        if (restaurantId == null || restaurantId.trim().isEmpty()) {
-            return ResponseEntity.ok(new java.util.ArrayList<>());
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(stockLogRepository.findAllByRestaurantId(rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
         }
-        return ResponseEntity.ok(stockLogRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim()));
     }
 
     /**
@@ -43,11 +48,12 @@ public class StockLogController {
     @GetMapping("/stock-logs/product/{productId}")
     public ResponseEntity<List<StockLog>> getStockLogsByProduct(@PathVariable String productId,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
-            return ResponseEntity.ok(stockLogRepository.findByProductIdAndRestaurantId(productId,
-                    restaurantId.toLowerCase().trim()));
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(stockLogRepository.findByProductIdAndRestaurantId(productId, rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
         }
-        return ResponseEntity.ok(stockLogRepository.findByProductId(productId));
     }
 
     /**
@@ -67,15 +73,14 @@ public class StockLogController {
     public ResponseEntity<?> createStockLog(@RequestBody StockLog stockLog,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
             if (stockLog.getId() == null || stockLog.getId().isEmpty()) {
                 stockLog.setId(java.util.UUID.randomUUID().toString());
             }
             if (stockLog.getCreatedAt() == null) {
                 stockLog.setCreatedAt(Instant.now().toString());
             }
-            if (restaurantId != null) {
-                stockLog.setRestaurantId(restaurantId);
-            }
+            stockLog.setRestaurantId(rid);
 
             StockLog saved = stockLogRepository.save(stockLog);
 
@@ -96,26 +101,24 @@ public class StockLogController {
      * DELETE /api/stock-logs/{id}
      */
     @DeleteMapping("/stock-logs/{id}")
-    public ResponseEntity<?> deleteStockLog(@PathVariable String id) {
+    public ResponseEntity<?> deleteStockLog(@PathVariable String id,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
             if (!stockLogRepository.existsById(id)) {
-                Map<String, Object> error = new HashMap<>();
-                error.put("ok", false);
-                error.put("message", "Stock log not found");
-                return ResponseEntity.status(404).body(error);
+                return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Stock log not found"));
+            }
+
+            // Optional: Ensure it belongs to the RID
+            StockLog log = stockLogRepository.findById(id).orElse(null);
+            if (log != null && !rid.equals(log.getRestaurantId())) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", "Access denied"));
             }
 
             stockLogRepository.deleteById(id);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("ok", true);
-            response.put("message", "Stock log deleted successfully");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Stock log deleted successfully"));
         } catch (Exception e) {
-            Map<String, Object> error = new HashMap<>();
-            error.put("ok", false);
-            error.put("message", e.getMessage());
-            return ResponseEntity.status(500).body(error);
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }

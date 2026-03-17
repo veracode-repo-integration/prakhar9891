@@ -20,28 +20,18 @@ public class UserController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.pos.server.service.AuthService authService;
+
     // List all users - ADMIN ONLY
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> getAllUsers(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication();
-
-        // Belt and Suspenders: Manual Check + @PreAuthorize
-        boolean isAdmin = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        if (!isAdmin) {
-            return ResponseEntity.status(403).body(Map.of("message", "Access Denied"));
-        }
-
-        List<User> users;
-        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
-            users = userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
-        } else {
-            users = userRepository.findAll();
-        }
-
-        return ResponseEntity.ok(users.stream()
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            List<User> users = userRepository.findAllByRestaurantId(rid);
+            return ResponseEntity.ok(users.stream()
                 .map(u -> new UserResponse(
                         u.getDbId(),
                         u.getUsername(),
@@ -51,6 +41,9 @@ public class UserController {
                         u.getRole(),
                         u.getRestaurantId()))
                 .collect(Collectors.toList()));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));
+        }
     }
 
     // Update user role - ADMIN ONLY

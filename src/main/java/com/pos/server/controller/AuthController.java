@@ -114,10 +114,10 @@ public class AuthController {
     @PostMapping("/otp-login")
     public ResponseEntity<?> otpLogin(@RequestBody Map<String, String> request) {
         try {
-            String phone = request.get("phone");
+            String idToken = request.get("idToken");
             String restaurantId = request.get("restaurantId");
             String name = request.get("name");
-            User user = authService.loginByPhone(phone, restaurantId, name);
+            User user = authService.loginByPhone(idToken, restaurantId, name);
             String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId());
 
             Map<String, Object> response = new HashMap<>();

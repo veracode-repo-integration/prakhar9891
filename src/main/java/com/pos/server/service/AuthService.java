@@ -25,6 +25,9 @@ public class AuthService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.pos.server.security.FirebaseService firebaseService;
+
     @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
     private String superAdminPhones;
 
@@ -71,12 +74,13 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
-                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for normal login
+                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for
+                // normal login
                 if ("SUPER_ADMIN".equals(user.getRole())) {
                     user.setRole("ADMIN");
                     userRepository.save(user);
                 }
-                
+
                 checkSubscription(user);
                 return user;
             }
@@ -106,11 +110,20 @@ public class AuthService {
                 });
     }
 
-    public User loginByPhone(String phone, String restaurantId, String providedName) {
-        // 1. Clean phone number for normalized matching
+    public User loginByPhone(String idToken, String restaurantId, String providedName) {
+        String phone;
+        try {
+            // 1. Mandatory Backend Verification
+            phone = firebaseService.verifyIdToken(idToken);
+            System.out.println("[AuthService] Verified ID Token for: " + phone);
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication Failed: " + e.getMessage());
+        }
+
+        // 2. Clean phone number for normalized matching
         String cleanPhone = phone.replaceAll("\\D", "");
 
-        // 2. Try various matching strategies
+        // 3. Try various matching strategies
         Optional<User> userOpt = userRepository.findByContact(phone);
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
@@ -125,7 +138,7 @@ public class AuthService {
             return user;
         }
 
-        // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
+        // 4. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
         // (implies Dine-In context)
         if (restaurantId != null && !restaurantId.trim().isEmpty()) {
             System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
@@ -139,7 +152,8 @@ public class AuthService {
 
             User savedUser = userRepository.save(guest);
 
-            // Also save to Customers table so they appear in the Customers list for the shopkeeper
+            // Also save to Customers table so they appear in the Customers list for the
+            // shopkeeper
             try {
                 if (customerRepository.findFirstByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
                     com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
@@ -154,7 +168,7 @@ public class AuthService {
             } catch (Exception e) {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
-            
+
             checkSubscription(savedUser);
             return savedUser;
         }
@@ -191,9 +205,39 @@ public class AuthService {
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty()) return false;
+        if (restaurantId == null || restaurantId.isEmpty())
+            return false;
         return restaurantRepository.findById(restaurantId)
                 .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
                 .orElse(false);
+    }
+
+    /**
+     * Centralized tenant isolation check.
+     * Ensures users can only access their own restaurant's data.
+     * SUPER_ADMIN can bypass.
+     */
+    public String validateRestaurantAccess(String headerId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new RuntimeException("Unauthorized: Session not found");
+        }
+
+        String username = auth.getName();
+        User user = findByUsername(username);
+
+        // 1. SUPER_ADMIN override
+        if ("SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            return (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim() : user.getRestaurantId();
+        }
+
+        // 2. Strict Tenant Isolation for everyone else
+        String userRid = user.getRestaurantId();
+        if (userRid == null) {
+            throw new RuntimeException("Forbidden: User has no assigned restaurant");
+        }
+
+        return userRid.toLowerCase().trim();
     }
 }
