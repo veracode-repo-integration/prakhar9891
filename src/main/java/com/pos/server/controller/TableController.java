@@ -64,7 +64,9 @@ public class TableController {
         return tableService.updateTable(id, updates, restaurantId)
                 .map(table -> {
                     // Notify subscribers about table update (trigger sound alert)
-                    String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                    org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    String actingUser = (authInfo != null) ? authInfo.getName() : "system";
+
                     messagingTemplate.convertAndSend("/topic/orders", Map.of(
                         "type", "table_update", 
                         "tableId", table.getId(),
@@ -86,7 +88,9 @@ public class TableController {
         return tableService.updateTableStatus(id, status, restaurantId)
                 .map(table -> {
                     // Notify subscribers (triggers sound alert)
-                    String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                    org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                    String actingUser = (authInfo != null) ? authInfo.getName() : "system";
+
                     messagingTemplate.convertAndSend("/topic/orders", Map.of(
                         "type", "table_status_change", 
                         "tableId", table.getId(),

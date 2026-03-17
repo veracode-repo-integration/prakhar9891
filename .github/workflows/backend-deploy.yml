@@ -12,6 +12,7 @@ env:
   PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
   SERVICE_NAME: pos-backend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   deploy:

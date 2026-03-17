@@ -47,8 +47,10 @@ public class OrderController {
             request.setRestaurantId(rid);
 
             Order saved = orderService.processCheckout(request);
-            // Notify subscribers about new order with acting user context
-            String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+            // Notify subscribers about new order with acting user context (Defensive)
+            org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String actingUser = (authInfo != null) ? authInfo.getName() : "system";
+            
             messagingTemplate.convertAndSend("/topic/orders", Map.of(
                 "order", saved,
                 "actingUser", actingUser,
@@ -70,8 +72,10 @@ public class OrderController {
             String rid = validateRestaurantAccess(restaurantId);
             Order updated = orderService.updateOrder(id, updates, rid);
             if (updated != null) {
-                // Notify subscribers about updated order
-                String actingUser = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication().getName();
+                // Notify subscribers about updated order (Defensive)
+                org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                String actingUser = (authInfo != null) ? authInfo.getName() : "system";
+
                 messagingTemplate.convertAndSend("/topic/orders", Map.of(
                     "order", updated,
                     "actingUser", actingUser,
