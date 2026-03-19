@@ -48,11 +48,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Enforcement: Block requests if restaurant is suspended
                 if (restaurantId != null && !"SUPER_ADMIN".equalsIgnoreCase(role)) {
-                    java.util.Optional<com.pos.server.model.Restaurant> restOpt = restaurantRepository.findById(restaurantId.toLowerCase());
-                    if (restOpt.isPresent() && "SUSPENDED".equalsIgnoreCase(restOpt.get().getStatus())) {
-                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        response.getWriter().write("{\"ok\":false,\"message\":\"Account is suspended\"}");
-                        return;
+                    if (restOpt.isPresent()) {
+                        String status = restOpt.get().getStatus();
+                        if ("SUSPENDED".equalsIgnoreCase(status)) {
+                            System.err.println("[Security] BLOCKED: Restaurant " + restaurantId + " is SUSPENDED. Status in DB: " + status);
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json"); 
+                            response.getWriter().write("{\"ok\":false,\"message\":\"Account is suspended\"}");
+                            return;
+                        } else {
+                            // System.out.println("[Security] ALLOWED: Restaurant " + restaurantId + " status is " + status);
+                        }
+                    } else {
+                        // System.out.println("[Security] MISSING: No record for restaurant " + restaurantId + " - Allowing by default.");
                     }
                 }
             }
