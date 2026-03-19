@@ -28,14 +28,15 @@ public class AuthService {
     @Autowired
     private com.pos.server.security.FirebaseService firebaseService;
 
-    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
+    @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9891260801}")
     private String superAdminPhones;
 
     private User assignSuperAdminIfApplicable(User user, String cleanPhone) {
         if (superAdminPhones != null && !superAdminPhones.isEmpty()) {
             boolean isSuperAdmin = java.util.Arrays.stream(superAdminPhones.split(","))
                     .map(p -> p.replaceAll("\\D", ""))
-                    .anyMatch(p -> p.equals(cleanPhone) || cleanPhone.endsWith(p));
+                    .filter(p -> p.length() >= 10)
+                    .anyMatch(p -> p.equals(cleanPhone) || (cleanPhone.length() >= 10 && cleanPhone.endsWith(p)));
             if (isSuperAdmin) {
                 user.setRole("SUPER_ADMIN");
                 // DO NOT save to repository. This role is transient for the session.
@@ -222,7 +223,8 @@ public class AuthService {
             String cleanUserPhone = user.getContact().replaceAll("\\D", "");
             boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
                     .map(p -> p.replaceAll("\\D", ""))
-                    .anyMatch(p -> p.equals(cleanUserPhone) || cleanUserPhone.endsWith(p));
+                    .filter(p -> p.length() >= 10)
+                    .anyMatch(p -> p.equals(cleanUserPhone) || (cleanUserPhone.length() >= 10 && cleanUserPhone.endsWith(p)));
             if (isSaByPhone) {
                 user.setRole("SUPER_ADMIN"); // Safe guard role for the session
                 return;
