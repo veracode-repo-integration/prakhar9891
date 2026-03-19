@@ -64,7 +64,7 @@ public class AuthService {
     }
 
     public User login(String identifier, String providedPassword) {
-        // Hardcoded Super Admin Bypass
+        // Hardcoded Super Admin Bypass (Username/Password)
         if ("superadmin".equals(identifier) && "superadmin@941219".equals(providedPassword)) {
             System.out.println("[AuthService] Super Admin Password Bypass triggered for: " + identifier);
             User sa = userRepository.findByUsername("superadmin").orElseGet(() -> {
@@ -90,6 +90,8 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
+                // Ensure Super Admin status is reassigned even on password login
+                user = assignSuperAdminIfApplicable(user, user.getContact() != null ? user.getContact().replaceAll("\\D", "") : "");
                 checkSubscription(user);
                 return user;
             }
@@ -210,9 +212,23 @@ public class AuthService {
     }
 
     public void checkSubscription(User user) {
-        if ("SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+        // Robust Multi-Layered Super Admin Bypass
+        if (user != null && user.getRole() != null && "SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
             return; // Super Admin always has access
         }
+
+        // Emergency fallback check against hardcoded Super Admin phones
+        if (user != null && user.getContact() != null && !user.getContact().isEmpty()) {
+            String cleanUserPhone = user.getContact().replaceAll("\\D", "");
+            boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
+                    .map(p -> p.replaceAll("\\D", ""))
+                    .anyMatch(p -> p.equals(cleanUserPhone) || cleanUserPhone.endsWith(p));
+            if (isSaByPhone) {
+                user.setRole("SUPER_ADMIN"); // Safe guard role for the session
+                return;
+            }
+        }
+
         if (user.getRestaurantId() != null && isRestaurantSuspended(user.getRestaurantId())) {
             throw new RuntimeException("Forbidden: Account is suspended");
         }
