@@ -60,7 +60,6 @@ public class AuthService {
         user.setRestaurantId(request.getRestaurantId() != null ? request.getRestaurantId().toLowerCase().trim() : null);
 
         User saved = userRepository.save(user);
-        checkSubscription(saved);
         return saved;
     }
 
@@ -97,8 +96,6 @@ public class AuthService {
                     user.setRole("ADMIN");
                     userRepository.save(user);
                 }
-
-                checkSubscription(user);
                 return user;
             }
         }
@@ -197,7 +194,6 @@ public class AuthService {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
 
-            checkSubscription(savedUser);
             return savedUser;
         }
 
@@ -214,30 +210,15 @@ public class AuthService {
 
         User savedUser = userRepository.save(newUser);
         User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
-        checkSubscription(finalUser);
         return finalUser;
     }
 
     public void checkSubscription(User user) {
-        if (user == null || user.getRestaurantId() == null || "SUPER_ADMIN".equals(user.getRole())) {
-            return;
-        }
-
-        Optional<Restaurant> restaurantOpt = restaurantRepository.findById(user.getRestaurantId());
-        if (restaurantOpt.isPresent()) {
-            Restaurant r = restaurantOpt.get();
-            if ("SUSPENDED".equalsIgnoreCase(r.getStatus())) {
-                throw new RuntimeException("Your account is suspended. Please connect 9891260801");
-            }
-        }
+        // Disabled globally as per user request
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return false;
-        return restaurantRepository.findById(restaurantId)
-                .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
-                .orElse(false);
+        return false;
     }
 
     /**

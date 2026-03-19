@@ -82,11 +82,7 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            String msg = e.getMessage();
-            if (msg != null && msg.contains("suspended")) {
-                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
-            }
-            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", msg));
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -103,10 +99,6 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            String msg = e.getMessage();
-            if (msg != null && msg.contains("suspended")) {
-                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
-            }
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Invalid credentials"));
         }
     }
@@ -126,11 +118,7 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            String msg = e.getMessage();
-            if (msg != null && msg.contains("suspended")) {
-                return ResponseEntity.status(403).body(Map.of("ok", false, "message", msg));
-            }
-            return ResponseEntity.status(401).body(Map.of("ok", false, "message", msg));
+            return ResponseEntity.status(401).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
