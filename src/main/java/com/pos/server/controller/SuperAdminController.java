@@ -69,7 +69,9 @@ public class SuperAdminController {
                     .map(Restaurant::getId)
                     .collect(java.util.stream.Collectors.toSet());
 
-            java.util.List<User> allUsers = userRepository.findAll();
+            java.util.List<User> allUsers = userRepository.findAll().stream()
+                    .filter(u -> !u.getUsername().startsWith("deleted_"))
+                    .collect(java.util.stream.Collectors.toList());
             java.util.Map<String, List<User>> usersByRestaurant = allUsers.stream()
                     .filter(u -> u.getRestaurantId() != null && !u.getRestaurantId().trim().isEmpty())
                     .collect(java.util.stream.Collectors.groupingBy(User::getRestaurantId));
@@ -126,7 +128,7 @@ public class SuperAdminController {
             validateSuperAdmin();
             List<Restaurant> all = restaurantRepository.findAll();
             List<User> allUsers = userRepository.findAll().stream()
-                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()) && !u.getUsername().startsWith("deleted_"))
                     .collect(java.util.stream.Collectors.toList());
 
             Map<String, Object> stats = new java.util.HashMap<>();
@@ -319,7 +321,7 @@ public class SuperAdminController {
         try {
             validateSuperAdmin();
             List<User> users = userRepository.findAllByRestaurantId(id).stream()
-                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()) && !u.getUsername().startsWith("deleted_"))
                     .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(users);
         } catch (Exception e) {
@@ -332,7 +334,7 @@ public class SuperAdminController {
         try {
             validateSuperAdmin();
             List<User> users = userRepository.findAll().stream()
-                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                    .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()) && !u.getUsername().startsWith("deleted_"))
                     .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(users);
         } catch (Exception e) {
