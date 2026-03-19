@@ -213,25 +213,11 @@ public class AuthService {
     }
 
     public void checkSubscription(User user) {
-        if (user == null || user.getRestaurantId() == null || "SUPER_ADMIN".equals(user.getRole())) {
-            return;
-        }
-
-        Optional<Restaurant> restaurantOpt = restaurantRepository.findById(user.getRestaurantId());
-        if (restaurantOpt.isPresent()) {
-            Restaurant r = restaurantOpt.get();
-            if ("SUSPENDED".equalsIgnoreCase(r.getStatus())) {
-                throw new RuntimeException("Your account is suspended. Please connect 9891260801");
-            }
-        }
+        // Functionality removed as requested
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {
-        if (restaurantId == null || restaurantId.isEmpty())
-            return false;
-        return restaurantRepository.findById(restaurantId)
-                .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
-                .orElse(false);
+        return false;
     }
 
     /**

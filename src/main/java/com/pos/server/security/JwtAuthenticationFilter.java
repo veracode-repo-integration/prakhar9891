@@ -46,19 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 role = jwtUtils.getRoleFromToken(token);
                 String restaurantId = jwtUtils.getRestaurantIdFromToken(token);
 
-                // Subscription Check: Block all non-superadmin requests if restaurant is
-                // suspended
-                if (restaurantId != null && !"SUPER_ADMIN".equals(role)) {
-                    boolean isSuspended = restaurantRepository.findById(restaurantId)
-                        .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
-                        .orElse(false);
-                    if (isSuspended) {
-                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                        response.setContentType("application/json");
-                        response.getWriter().write("{\"ok\":false,\"message\":\"Your account is suspended. Please connect 9891260801\"}");
-                        return;
-                    }
-                }
+                // Subscription Check removed as requested
             }
         }
 
