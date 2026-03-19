@@ -90,12 +90,6 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
-                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for
-                // normal login
-                if ("SUPER_ADMIN".equals(user.getRole())) {
-                    user.setRole("ADMIN");
-                    userRepository.save(user);
-                }
                 return user;
             }
         }
@@ -236,15 +230,20 @@ public class AuthService {
         String username = auth.getName();
         User user = findByUsername(username);
 
-        // 1. SUPER_ADMIN override
-        if ("SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
-            return (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim()
+        // Robust Super Admin check: Check both DB role AND current Authentication authorities
+        boolean isSuperAdmin = "SUPER_ADMIN".equalsIgnoreCase(user.getRole()) ||
+                auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin) {
+            // Super Admin can act on any restaurant via header, or their own (if assigned)
+            String targetRid = (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim()
                     : user.getRestaurantId();
+            return targetRid;
         }
 
-        // 2. Strict Tenant Isolation for everyone else
+        // Strict Tenant Isolation for everyone else
         String userRid = user.getRestaurantId();
-        if (userRid == null) {
+        if (userRid == null || userRid.trim().isEmpty()) {
             throw new RuntimeException("Forbidden: User has no assigned restaurant");
         }
 

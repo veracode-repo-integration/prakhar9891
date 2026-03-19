@@ -37,7 +37,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
         log.error("Runtime exception: ", ex);
-        return ResponseEntity.badRequest().body(Map.of("ok", false, "message", ex.getMessage()));
+        String message = ex.getMessage();
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        if (message != null) {
+            if (message.contains("Forbidden")) {
+                status = HttpStatus.FORBIDDEN;
+            } else if (message.contains("Unauthorized")) {
+                status = HttpStatus.UNAUTHORIZED;
+            }
+        }
+
+        return ResponseEntity.status(status).body(Map.of("ok", false, "message", message));
     }
 
     @ExceptionHandler(Exception.class)

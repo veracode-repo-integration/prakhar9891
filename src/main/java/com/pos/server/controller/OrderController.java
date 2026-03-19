@@ -25,18 +25,26 @@ public class OrderController {
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/pos-orders")
-    public List<Order> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = authService.validateRestaurantAccess(restaurantId);
-        return orderService.getAllOrders(rid);
+    public ResponseEntity<List<Order>> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(orderService.getAllOrders(rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
 
     @GetMapping("/v2/pos-orders")
-    public org.springframework.data.domain.Page<Order> getOrdersPaged(
+    public ResponseEntity<org.springframework.data.domain.Page<Order>> getOrdersPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = authService.validateRestaurantAccess(restaurantId);
-        return orderService.getOrdersPaged(rid, page, size);
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(orderService.getOrdersPaged(rid, page, size));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(org.springframework.data.domain.Page.empty());
+        }
     }
 
     @PostMapping("/checkout")

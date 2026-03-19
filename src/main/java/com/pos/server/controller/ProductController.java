@@ -21,9 +21,13 @@ public class ProductController {
     private com.pos.server.service.AuthService authService;
 
     @GetMapping
-    public List<Product> getProducts(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = authService.validateRestaurantAccess(restaurantId);
-        return productService.getAllProducts(rid);
+    public ResponseEntity<List<Product>> getProducts(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(productService.getAllProducts(rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
 
     @PostMapping
