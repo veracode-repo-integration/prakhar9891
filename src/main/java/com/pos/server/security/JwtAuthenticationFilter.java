@@ -24,6 +24,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private UserDetailsService userDetailsService;
 
+    @Autowired
+    private com.pos.server.repository.RestaurantRepository restaurantRepository;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -41,6 +44,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (jwtUtils.validateToken(token)) {
                 username = jwtUtils.getUsernameFromToken(token);
                 role = jwtUtils.getRoleFromToken(token);
+                String restaurantId = jwtUtils.getRestaurantIdFromToken(token);
+
+                // Enforcement: Block requests if restaurant is suspended
+                if (restaurantId != null && !"SUPER_ADMIN".equalsIgnoreCase(role)) {
+                    java.util.Optional<com.pos.server.model.Restaurant> restOpt = restaurantRepository.findById(restaurantId);
+                    if (restOpt.isPresent()) {
+                        String status = restOpt.get().getStatus();
+                        if ("SUSPENDED".equalsIgnoreCase(status)) {
+                            System.err.println("[Security] BLOCKED: Restaurant " + restaurantId + " is SUSPENDED. Status in DB: " + status);
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json"); 
+                            response.getWriter().write("{\"ok\":false,\"message\":\"Account is suspended\"}");
+                            return;
+                        } else {
+                            // System.out.println("[Security] ALLOWED: Restaurant " + restaurantId + " status is " + status);
+                        }
+                    } else {
+                        // System.out.println("[Security] MISSING: No record for restaurant " + restaurantId + " - Allowing by default.");
+                    }
+                }
             }
         }
 

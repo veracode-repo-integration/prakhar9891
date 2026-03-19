@@ -1,11 +1,13 @@
 package com.pos.server.service;
 
 import com.pos.server.model.User;
+import com.pos.server.model.Restaurant;
 import com.pos.server.repository.UserRepository;
+import com.pos.server.repository.RestaurantRepository;
+import com.pos.server.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.util.Optional;
 
 @Service
@@ -15,10 +17,16 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
-    private com.pos.server.repository.CustomerRepository customerRepository;
+    private RestaurantRepository restaurantRepository;
+
+    @Autowired
+    private CustomerRepository customerRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private com.pos.server.security.FirebaseService firebaseService;
 
     @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
     private String superAdminPhones;
@@ -51,10 +59,28 @@ public class AuthService {
         user.setRole(request.getRole() != null ? request.getRole() : "STAFF");
         user.setRestaurantId(request.getRestaurantId() != null ? request.getRestaurantId().toLowerCase().trim() : null);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        return saved;
     }
 
     public User login(String identifier, String providedPassword) {
+        // Hardcoded Super Admin Bypass (Username/Password)
+        if ("superadmin".equals(identifier) && "superadmin@941219".equals(providedPassword)) {
+            System.out.println("[AuthService] Super Admin Password Bypass triggered for: " + identifier);
+            User sa = userRepository.findByUsername("superadmin").orElseGet(() -> {
+                User newUser = new User();
+                newUser.setUsername("superadmin");
+                newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+                newUser.setRole("ADMIN");
+                newUser.setFirstName("Super");
+                newUser.setLastName("Admin");
+                newUser.setContact("9891260801");
+                return userRepository.save(newUser);
+            });
+            sa.setRole("SUPER_ADMIN");
+            return sa;
+        }
+
         Optional<User> userOpt = userRepository.findByUsername(identifier);
         if (userOpt.isEmpty())
             userOpt = userRepository.findByEmail(identifier);
@@ -64,12 +90,9 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
-                // Fix: If the user was stuck as SUPER_ADMIN in DB, downgrade to ADMIN for
-                // normal login
-                if ("SUPER_ADMIN".equals(user.getRole())) {
-                    user.setRole("ADMIN");
-                    userRepository.save(user);
-                }
+                // Ensure Super Admin status is reassigned even on password login
+                user = assignSuperAdminIfApplicable(user, user.getContact() != null ? user.getContact().replaceAll("\\D", "") : "");
+                checkSubscription(user);
                 return user;
             }
         }
@@ -78,7 +101,13 @@ public class AuthService {
 
     public void deleteUser(String username) {
         User user = findByUsername(username);
-        userRepository.delete(user);
+        // Robust Deletion: Instead of physical delete which breaks foreign keys (orders, etc.)
+        // We de-identify the user to "free up" the username and contact
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        user.setUsername("deleted_" + user.getUsername() + "_" + timestamp);
+        user.setContact("deleted_" + timestamp);
+        user.setEmail(null);
+        userRepository.save(user);
     }
 
     public User findByUsername(String username) {
@@ -98,11 +127,25 @@ public class AuthService {
                 });
     }
 
-    public User loginByPhone(String phone, String restaurantId, String providedName) {
-        // 1. Clean phone number for normalized matching
+    public User loginByPhone(String idToken, String restaurantId, String providedName) {
+        String phone;
+        try {
+            // 1. Mandatory Backend Verification (with Super Admin Bypass)
+            if ("super-admin-bypass".equals(idToken)) {
+                phone = "+919891260801";
+                System.out.println("[AuthService] Super Admin Bypass used for: " + phone);
+            } else {
+                phone = firebaseService.verifyIdToken(idToken);
+                System.out.println("[AuthService] Verified ID Token for: " + phone);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Authentication Failed: " + e.getMessage());
+        }
+
+        // 2. Clean phone number for normalized matching
         String cleanPhone = phone.replaceAll("\\D", "");
 
-        // 2. Try various matching strategies
+        // 3. Try various matching strategies
         Optional<User> userOpt = userRepository.findByContact(phone);
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
@@ -112,10 +155,12 @@ public class AuthService {
         }
 
         if (userOpt.isPresent()) {
-            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
+            User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
+            checkSubscription(user);
+            return user;
         }
 
-        // 3. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
+        // 4. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
         // (implies Dine-In context)
         if (restaurantId != null && !restaurantId.trim().isEmpty()) {
             System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
@@ -149,10 +194,6 @@ public class AuthService {
             return savedUser;
         }
 
-        if (userOpt.isPresent()) {
-            return assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
-        }
-
         // Auto-Register New User
         User newUser = new User();
         newUser.setUsername(phone);
@@ -164,6 +205,78 @@ public class AuthService {
         // Set a random password since they used OTP
         newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
 
-        return assignSuperAdminIfApplicable(userRepository.save(newUser), cleanPhone);
+        User savedUser = userRepository.save(newUser);
+        User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
+        checkSubscription(finalUser);
+        return finalUser;
+    }
+
+    public void checkSubscription(User user) {
+        // Robust Multi-Layered Super Admin Bypass
+        if (user != null && user.getRole() != null && "SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            return; // Super Admin always has access
+        }
+
+        // Emergency fallback check against hardcoded Super Admin phones
+        if (user != null && user.getContact() != null && !user.getContact().isEmpty()) {
+            String cleanUserPhone = user.getContact().replaceAll("\\D", "");
+            boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
+                    .map(p -> p.replaceAll("\\D", ""))
+                    .anyMatch(p -> p.equals(cleanUserPhone) || cleanUserPhone.endsWith(p));
+            if (isSaByPhone) {
+                user.setRole("SUPER_ADMIN"); // Safe guard role for the session
+                return;
+            }
+        }
+
+        if (user.getRestaurantId() != null && isRestaurantSuspended(user.getRestaurantId())) {
+            throw new RuntimeException("Forbidden: Account is suspended");
+        }
+    }
+
+    public boolean isRestaurantSuspended(String restaurantId) {
+        if (restaurantId == null)
+            return false;
+        Optional<Restaurant> restOpt = restaurantRepository.findById(restaurantId.toLowerCase());
+        if (restOpt.isPresent()) {
+            Restaurant r = restOpt.get();
+            return "SUSPENDED".equalsIgnoreCase(r.getStatus());
+        }
+        return false;
+    }
+
+    /**
+     * Centralized tenant isolation check.
+     * Ensures users can only access their own restaurant's data.
+     * SUPER_ADMIN can bypass.
+     */
+    public String validateRestaurantAccess(String headerId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new RuntimeException("Unauthorized: Session not found");
+        }
+
+        String username = auth.getName();
+        User user = findByUsername(username);
+
+        // Robust Super Admin check: Check both DB role AND current Authentication authorities
+        boolean isSuperAdmin = "SUPER_ADMIN".equalsIgnoreCase(user.getRole()) ||
+                auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
+
+        if (isSuperAdmin) {
+            // Super Admin can act on any restaurant via header, or their own (if assigned)
+            String targetRid = (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim()
+                    : user.getRestaurantId();
+            return targetRid;
+        }
+
+        // Strict Tenant Isolation for everyone else
+        String userRid = user.getRestaurantId();
+        if (userRid == null || userRid.trim().isEmpty()) {
+            throw new RuntimeException("Forbidden: User has no assigned restaurant");
+        }
+
+        return userRid.toLowerCase().trim();
     }
 }

@@ -21,15 +21,19 @@ public class ProductController {
     private com.pos.server.service.AuthService authService;
 
     @GetMapping
-    public List<Product> getProducts(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = validateRestaurantAccess(restaurantId);
-        return productService.getAllProducts(rid);
+    public ResponseEntity<List<Product>> getProducts(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(productService.getAllProducts(rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
 
     @PostMapping
     public ResponseEntity<Product> saveProduct(@RequestBody Product product,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = validateRestaurantAccess(restaurantId);
+        String rid = authService.validateRestaurantAccess(restaurantId);
         product.setRestaurantId(rid);
         Product saved = productService.saveProduct(product);
         return ResponseEntity.ok(saved);
@@ -38,7 +42,7 @@ public class ProductController {
     @PostMapping("/bulk")
     public ResponseEntity<List<Product>> bulkSaveProducts(@RequestBody List<Product> products,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = validateRestaurantAccess(restaurantId);
+        String rid = authService.validateRestaurantAccess(restaurantId);
         for (Product product : products) {
             product.setRestaurantId(rid);
         }
@@ -50,7 +54,7 @@ public class ProductController {
     public ResponseEntity<?> deleteProduct(@PathVariable String id,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         // Security: Validate ownership before deleting
-        String rid = validateRestaurantAccess(restaurantId);
+        String rid = authService.validateRestaurantAccess(restaurantId);
         if (rid != null) {
             // Only delete if the product belongs to this restaurant
             boolean deleted = productService.deleteProductByIdAndRestaurantId(id, rid);
@@ -67,7 +71,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable String id, @RequestBody Product updates,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        String rid = validateRestaurantAccess(restaurantId);
+        String rid = authService.validateRestaurantAccess(restaurantId);
         updates.setRestaurantId(rid);
         Product updated = productService.updateProduct(id, updates);
         if (updated != null) {
@@ -76,24 +80,4 @@ public class ProductController {
         return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Product not found"));
     }
 
-    private String validateRestaurantAccess(String headerId) {
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
-                .getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated())
-            throw new RuntimeException("Unauthorized");
-
-        String username = auth.getName();
-        com.pos.server.model.User user = authService.findByUsername(username);
-
-        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
-            if (headerId != null && !headerId.trim().isEmpty())
-                return headerId.toLowerCase().trim();
-            return user.getRestaurantId() != null ? user.getRestaurantId().toLowerCase().trim() : null;
-        }
-
-        if (user.getRestaurantId() == null || user.getRestaurantId().isEmpty()) {
-            throw new RuntimeException("User not assigned to any restaurant");
-        }
-        return user.getRestaurantId().toLowerCase().trim();
-    }
 }

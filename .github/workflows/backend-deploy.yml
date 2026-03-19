@@ -12,22 +12,23 @@ env:
   PROJECT_ID: udhyog-khaata-pos
   REGION: us-central1
   SERVICE_NAME: pos-backend
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Google Auth
-        uses: 'google-github-actions/auth@v1'
+        uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_SA_KEY }}'
           project_id: udhyog-khaata-pos
 
       - name: 'Set up Cloud SDK'
-        uses: 'google-github-actions/setup-gcloud@v1'
+        uses: 'google-github-actions/setup-gcloud@v2'
 
       - name: 'Docker Auth'
         run: gcloud auth configure-docker us-central1-docker.pkg.dev

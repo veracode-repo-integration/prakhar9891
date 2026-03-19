@@ -2,6 +2,9 @@ package com.pos.server;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import com.pos.server.repository.UserRepository;
+import com.pos.server.repository.RestaurantRepository;
 
 @SpringBootApplication
 public class PosServerApplication {
