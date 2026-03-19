@@ -107,7 +107,13 @@ public class AuthService {
 
     public void deleteUser(String username) {
         User user = findByUsername(username);
-        userRepository.delete(user);
+        // Robust Deletion: Instead of physical delete which breaks foreign keys (orders, etc.)
+        // We de-identify the user to "free up" the username and contact
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        user.setUsername("deleted_" + user.getUsername() + "_" + timestamp);
+        user.setContact("deleted_" + timestamp);
+        user.setEmail(null);
+        userRepository.save(user);
     }
 
     public User findByUsername(String username) {
@@ -213,11 +219,25 @@ public class AuthService {
     }
 
     public void checkSubscription(User user) {
-        // Functionality removed as requested
+        if (user == null || user.getRestaurantId() == null || "SUPER_ADMIN".equals(user.getRole())) {
+            return;
+        }
+
+        Optional<Restaurant> restaurantOpt = restaurantRepository.findById(user.getRestaurantId());
+        if (restaurantOpt.isPresent()) {
+            Restaurant r = restaurantOpt.get();
+            if ("SUSPENDED".equalsIgnoreCase(r.getStatus())) {
+                throw new RuntimeException("Your account is suspended. Please connect 9891260801");
+            }
+        }
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {
-        return false;
+        if (restaurantId == null || restaurantId.isEmpty())
+            return false;
+        return restaurantRepository.findById(restaurantId)
+                .map(r -> "SUSPENDED".equalsIgnoreCase(r.getStatus()))
+                .orElse(false);
     }
 
     /**
@@ -237,7 +257,8 @@ public class AuthService {
 
         // 1. SUPER_ADMIN override
         if ("SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
-            return (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim() : user.getRestaurantId();
+            return (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim()
+                    : user.getRestaurantId();
         }
 
         // 2. Strict Tenant Isolation for everyone else
