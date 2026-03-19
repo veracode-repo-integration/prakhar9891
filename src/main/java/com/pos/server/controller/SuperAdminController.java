@@ -348,14 +348,17 @@ public class SuperAdminController {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
         try {
-            // Delete from restaurant table if it exists
-            if (restaurantRepository.existsById(id)) {
-                restaurantRepository.deleteById(id);
-            }
-            // Also remove all users belonging to this restaurant (handles inferred stores)
+            // De-identify from user table if it exists
             List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(id);
             for (com.pos.server.model.User u : users) {
-                userRepository.delete(u);
+                authService.deleteUser(u.getUsername());
+            }
+            // Optional: Soft delete restaurant or just leave as is if users are gone
+            if (restaurantRepository.existsById(id)) {
+                com.pos.server.model.Restaurant r = restaurantRepository.findById(id).get();
+                r.setStatus("DELETED");
+                r.setId("deleted_" + id + "_" + System.currentTimeMillis());
+                restaurantRepository.save(r);
             }
             return ResponseEntity.ok(Map.of("ok", true,
                     "message", "Store " + id + " and " + users.size() + " user(s) removed."));
@@ -374,8 +377,8 @@ public class SuperAdminController {
         try {
             Optional<com.pos.server.model.User> userOpt = userRepository.findByUsername(username);
             if (userOpt.isPresent()) {
-                userRepository.delete(userOpt.get());
-                return ResponseEntity.ok(Map.of("ok", true, "message", "User " + username + " deleted"));
+                authService.deleteUser(username);
+                return ResponseEntity.ok(Map.of("ok", true, "message", "User " + username + " de-identified (soft-deleted)"));
             } else {
                 return ResponseEntity.ok(Map.of("ok", true, "message", "User not found, nothing to delete"));
             }
