@@ -99,6 +99,9 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("suspended")) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", "Account is suspended"));
+            }
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Invalid credentials"));
         }
     }
@@ -118,6 +121,9 @@ public class AuthController {
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("suspended")) {
+                return ResponseEntity.status(403).body(Map.of("ok", false, "message", "Account is suspended"));
+            }
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }

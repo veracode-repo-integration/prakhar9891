@@ -90,6 +90,7 @@ public class AuthService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(providedPassword, user.getPasswordHash())) {
+                checkSubscription(user);
                 return user;
             }
         }
@@ -204,14 +205,27 @@ public class AuthService {
 
         User savedUser = userRepository.save(newUser);
         User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
+        checkSubscription(finalUser);
         return finalUser;
     }
 
     public void checkSubscription(User user) {
-        // Disabled globally as per user request
+        if ("SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            return; // Super Admin always has access
+        }
+        if (user.getRestaurantId() != null && isRestaurantSuspended(user.getRestaurantId())) {
+            throw new RuntimeException("Forbidden: Account is suspended");
+        }
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {
+        if (restaurantId == null)
+            return false;
+        Optional<Restaurant> restOpt = restaurantRepository.findById(restaurantId.toLowerCase());
+        if (restOpt.isPresent()) {
+            Restaurant r = restOpt.get();
+            return "SUSPENDED".equalsIgnoreCase(r.getStatus());
+        }
         return false;
     }
 
