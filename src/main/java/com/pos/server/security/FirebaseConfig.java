@@ -12,7 +12,7 @@ import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
     
-    @Value("${gcp.project-id:udhyog-khaata-pos}")
+    @Value("${gcp.project-id:udhyog-khaata}")
     private String projectId;
 
     @PostConstruct
