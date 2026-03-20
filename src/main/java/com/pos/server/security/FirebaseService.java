@@ -9,7 +9,8 @@ public class FirebaseService {
 
     public String verifyIdToken(String idToken) throws Exception {
         try {
-            FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+            com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
+            FirebaseToken decodedToken = FirebaseAuth.getInstance(app).verifyIdToken(idToken);
             String phone = (String) decodedToken.getClaims().get("phone_number");
             
             if (phone == null || phone.isEmpty()) {
