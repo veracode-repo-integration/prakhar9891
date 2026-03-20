@@ -175,8 +175,6 @@ public class AuthService {
 
             User savedUser = userRepository.save(guest);
             User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
-            checkSubscription(finalUser);
-            return finalUser;
 
             // Also save to Customers table so they appear in the Customers list for the
             // shopkeeper
@@ -195,7 +193,8 @@ public class AuthService {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
 
-            return savedUser;
+            checkSubscription(finalUser);
+            return finalUser;
         }
 
         // Auto-Register New User
