@@ -215,43 +215,46 @@ public class AuthService {
     }
 
     public void checkSubscription(User user) {
-        // Robust Multi-Layered Super Admin Bypass
-        if (user != null && user.getRole() != null && "SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
-            return; // Super Admin always has access
+        if (user == null) return;
+        
+        String contact = user.getContact() != null ? user.getContact() : "Unknown";
+        String role = user.getRole() != null ? user.getRole() : "None";
+        String rid = user.getRestaurantId();
+
+        System.out.println("[Auth] Checking suspension for user: " + contact + " | Role: " + role + " | Restaurant: " + rid);
+
+        // 1. Super Admin Role Bypass
+        if ("SUPER_ADMIN".equalsIgnoreCase(role)) {
+            System.out.println("[Auth] Bypassing: User has SUPER_ADMIN role");
+            return;
         }
 
-        // Emergency fallback check against hardcoded Super Admin phones
-        if (user != null && user.getContact() != null && !user.getContact().isEmpty()) {
-            String cleanUserPhone = user.getContact().replaceAll("\\D", "");
-            boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
+        // 2. Guest Role Bypass
+        if ("GUEST".equalsIgnoreCase(role)) {
+            System.out.println("[Auth] Bypassing: User has GUEST role");
+            return;
+        }
+
+        // 3. Super Admin Phone Fallback
+        if (contact != null && !contact.isEmpty()) {
+            String cleanUPhone = contact.replaceAll("\\D", "");
+            boolean isSaByNum = java.util.Arrays.stream(superAdminPhones.split(","))
                     .map(p -> p.replaceAll("\\D", ""))
                     .filter(p -> p.length() >= 10)
-                    .anyMatch(p -> p.equals(cleanUserPhone) || (cleanUserPhone.length() >= 10 && cleanUserPhone.endsWith(p)));
-            if (isSaByPhone) {
-                user.setRole("SUPER_ADMIN"); // Safe guard role for the session
+                    .anyMatch(p -> p.equals(cleanUPhone) || (cleanUPhone.length() >= 10 && cleanUPhone.endsWith(p)));
+            if (isSaByNum) {
+                System.out.println("[Auth] Bypassing: User phone " + contact + " is in Super Admin list");
                 return;
             }
         }
 
-        // --- GUEST BYPASS ---
-        // Allow Dine-In Guests to see the menu even if restaurant is pending setup/suspended
-        // so testing isn't blocked.
-        if (user != null && "GUEST".equalsIgnoreCase(user.getRole())) {
-            return;
-        }
-
-        if (user.getRestaurantId() != null && isRestaurantSuspended(user.getRestaurantId())) {
-            // Final Super Admin check before throwing
-            if (user.getContact() != null) {
-                String cleanUserPhone = user.getContact().replaceAll("\\D", "");
-                boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
-                        .map(p -> p.replaceAll("\\D", ""))
-                        .filter(p -> p.length() >= 10)
-                        .anyMatch(p -> p.equals(cleanUserPhone) || (cleanUserPhone.length() >= 10 && cleanUserPhone.endsWith(p)));
-                if (isSaByPhone) return;
-            }
+        // 4. Actual Suspension Check
+        if (rid != null && isRestaurantSuspended(rid)) {
+            System.err.println("[Auth] BLOCKED: Restaurant " + rid + " is SUSPENDED for user: " + contact);
             throw new RuntimeException("Forbidden: Account is suspended");
         }
+        
+        System.out.println("[Auth] Check passed: Restaurant status is ACTIVE or not found");
     }
 
     public boolean isRestaurantSuspended(String restaurantId) {

@@ -46,8 +46,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 role = jwtUtils.getRoleFromToken(token);
                 String restaurantId = jwtUtils.getRestaurantIdFromToken(token);
 
-                // Enforcement: Block requests if restaurant is suspended
-                if (restaurantId != null && !"SUPER_ADMIN".equalsIgnoreCase(role)) {
+                // Enforcement: Block requests if restaurant is suspended (SUPER_ADMIN and GUEST bypass)
+                if (restaurantId != null && !"SUPER_ADMIN".equalsIgnoreCase(role) && !"GUEST".equalsIgnoreCase(role)) {
                     java.util.Optional<com.pos.server.model.Restaurant> restOpt = restaurantRepository.findById(restaurantId);
                     if (restOpt.isPresent()) {
                         String status = restOpt.get().getStatus();
