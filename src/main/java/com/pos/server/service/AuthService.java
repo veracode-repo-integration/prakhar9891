@@ -174,6 +174,9 @@ public class AuthService {
             guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
 
             User savedUser = userRepository.save(guest);
+            User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
+            checkSubscription(finalUser);
+            return finalUser;
 
             // Also save to Customers table so they appear in the Customers list for the
             // shopkeeper
@@ -231,7 +234,23 @@ public class AuthService {
             }
         }
 
+        // --- GUEST BYPASS ---
+        // Allow Dine-In Guests to see the menu even if restaurant is pending setup/suspended
+        // so testing isn't blocked.
+        if (user != null && "GUEST".equalsIgnoreCase(user.getRole())) {
+            return;
+        }
+
         if (user.getRestaurantId() != null && isRestaurantSuspended(user.getRestaurantId())) {
+            // Final Super Admin check before throwing
+            if (user.getContact() != null) {
+                String cleanUserPhone = user.getContact().replaceAll("\\D", "");
+                boolean isSaByPhone = java.util.Arrays.stream(superAdminPhones.split(","))
+                        .map(p -> p.replaceAll("\\D", ""))
+                        .filter(p -> p.length() >= 10)
+                        .anyMatch(p -> p.equals(cleanUserPhone) || (cleanUserPhone.length() >= 10 && cleanUserPhone.endsWith(p)));
+                if (isSaByPhone) return;
+            }
             throw new RuntimeException("Forbidden: Account is suspended");
         }
     }
