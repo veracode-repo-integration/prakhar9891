@@ -321,8 +321,26 @@ public class OrderService {
                 // Secondary check: If it's a full refund and amount is missing, sync it to total
                 order.setPartialRefundAmount(order.getTotal());
                 log.info("[OrderService] Syncing full refund amount (total: {}) for order {}", order.getTotal(), id);
-            } else if (order.isRefunded() && "partially_refunded".equalsIgnoreCase(order.getStatus()) && order.getPartialRefundAmount() == 0) {
-                log.warn("[OrderService] Order {} is partially_refunded but has 0 amount. Investigation required.", id);
+            } else if (order.isRefunded() && "partially_refunded".equalsIgnoreCase(order.getStatus()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0)) {
+                // Attempt to auto-recalculate from items JSON if available
+                String json = updates.getRefundedItemsJson() != null ? updates.getRefundedItemsJson() : order.getRefundedItemsJson();
+                if (json != null && !json.isEmpty()) {
+                    try {
+                        List<Map<String, Object>> rItems = mapper.readValue(json, List.class);
+                        double calculatedTotal = 0;
+                        for (Map<String, Object> ri : rItems) {
+                            double price = ri.get("price") != null ? ((Number) ri.get("price")).doubleValue() : 0;
+                            double qty = ri.get("qty") != null ? ((Number) ri.get("qty")).doubleValue() : 0;
+                            calculatedTotal += (price * qty);
+                        }
+                        if (calculatedTotal > 0) {
+                            order.setPartialRefundAmount(calculatedTotal);
+                            log.info("[OrderService] Recalculated partial refund amount (total: {}) from JSON for partially refunded order {}", calculatedTotal, id);
+                        }
+                    } catch (Exception e) {
+                        log.warn("[OrderService] Could not recalculate refund for {}: {}", id, e.getMessage());
+                    }
+                }
             }
             
             if (updates.getRefundedTaxAmount() > 0)
