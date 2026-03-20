@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class AuthService {
@@ -146,7 +148,7 @@ public class AuthService {
         // 2. Clean phone number for normalized matching
         String cleanPhone = phone.replaceAll("\\D", "");
 
-        // 3. Try various matching strategies
+        // 3. Try finding existing user
         Optional<User> userOpt = userRepository.findByContact(phone);
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
@@ -157,28 +159,31 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
-            checkSubscription(user);
+            // BYPASS subscription check for Dine-In sessions (allows admins to test as guests)
+            if (restaurantId == null || restaurantId.trim().isEmpty()) {
+                checkSubscription(user);
+            } else {
+                System.out.println("[Auth] Bypassing subscription check for existing user in Dine-In context");
+            }
             return user;
         }
 
-        // 4. DINE-IN GUEST BYPASS: Only create guest record if restaurantId is present
-        // (implies Dine-In context)
+        // 4. Create New User
         if (restaurantId != null && !restaurantId.trim().isEmpty()) {
-            System.out.println("[AuthService] No user for " + phone + ". Creating Guest record for Dine-In flow.");
+            // DINE-IN GUEST FLOW
+            System.out.println("[AuthService] Creating Guest record for Dine-In flow: " + phone);
             User guest = new User();
             guest.setUsername("customer_" + cleanPhone);
             guest.setContact(phone);
             guest.setFirstName(providedName != null && !providedName.isEmpty() ? providedName : "Guest");
             guest.setRole("GUEST");
-            // Standardize to lowercase for consistency
-            guest.setRestaurantId(restaurantId != null ? restaurantId.toLowerCase() : null);
+            guest.setRestaurantId(restaurantId.toLowerCase().trim());
             guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
 
             User savedUser = userRepository.save(guest);
             User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
 
-            // Also save to Customers table so they appear in the Customers list for the
-            // shopkeeper
+            // Save to Customers table
             try {
                 if (customerRepository.findFirstByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
                     com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
@@ -193,26 +198,23 @@ public class AuthService {
             } catch (Exception e) {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
+            
+            checkSubscription(finalUser);
+            return finalUser;
+        } else {
+            // AUTO-REGISTER ADMIN FLOW
+            User newUser = new User();
+            newUser.setUsername(phone);
+            newUser.setContact(phone);
+            newUser.setRole("ADMIN");
+            newUser.setRestaurantId(phone); // Default to phone
+            newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
 
+            User savedUser = userRepository.save(newUser);
+            User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
             checkSubscription(finalUser);
             return finalUser;
         }
-
-        // Auto-Register New User
-        User newUser = new User();
-        newUser.setUsername(phone);
-        newUser.setContact(phone);
-        // Default to ADMIN so they can setup their shop
-        newUser.setRole("ADMIN");
-        // Use phone as default Restaurant ID (Unique & Memorable)
-        newUser.setRestaurantId(phone);
-        // Set a random password since they used OTP
-        newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
-
-        User savedUser = userRepository.save(newUser);
-        User finalUser = assignSuperAdminIfApplicable(savedUser, cleanPhone);
-        checkSubscription(finalUser);
-        return finalUser;
     }
 
     public void checkSubscription(User user) {
@@ -269,11 +271,6 @@ public class AuthService {
         return false;
     }
 
-    /**
-     * Centralized tenant isolation check.
-     * Ensures users can only access their own restaurant's data.
-     * SUPER_ADMIN can bypass.
-     */
     public String validateRestaurantAccess(String headerId) {
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication();
@@ -284,25 +281,22 @@ public class AuthService {
         String username = auth.getName();
         User user = findByUsername(username);
 
-        // Robust Super Admin check: Check both DB role AND current Authentication authorities
         boolean isSuperAdmin = "SUPER_ADMIN".equalsIgnoreCase(user.getRole()) ||
                 auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SUPER_ADMIN"));
 
         if (isSuperAdmin) {
-            // Super Admin can act on any restaurant via header, or their own (if assigned)
             String targetRid = (headerId != null && !headerId.trim().isEmpty()) ? headerId.toLowerCase().trim()
                     : user.getRestaurantId();
             return targetRid;
         }
 
-        // Strict Tenant Isolation for everyone else
         String userRid = user.getRestaurantId() != null ? user.getRestaurantId().toLowerCase() : null;
         String compareHeader = headerId != null ? headerId.toLowerCase() : null;
         
-        if (compareHeader != null && !compareHeader.equals(userRid) && !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+        if (compareHeader != null && !compareHeader.equals(userRid) && !"GUEST".equalsIgnoreCase(user.getRole())) {
             throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
         }
 
-        return userRid.toLowerCase().trim();
+        return userRid != null ? userRid : compareHeader;
     }
 }
