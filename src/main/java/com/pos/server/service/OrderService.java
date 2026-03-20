@@ -298,9 +298,9 @@ public class OrderService {
             }
 
             if (updates.getStatus() != null)
-                order.setStatus(updates.getStatus());
+                order.setStatus(updates.getStatus().toLowerCase().trim());
             if (updates.getKitchenStatus() != null)
-                order.setKitchenStatus(updates.getKitchenStatus());
+                order.setKitchenStatus(updates.getKitchenStatus().toLowerCase().trim());
 
             // Refund logic
             log.info("[OrderService] Processing refund updates for order {}. New Status: {}, Partial Amount: {}", 
@@ -316,9 +316,13 @@ public class OrderService {
             // This prevents overwriting with 0.0 during unrelated updates (like kitchen status)
             if (updates.getPartialRefundAmount() > 0) {
                 order.setPartialRefundAmount(updates.getPartialRefundAmount());
-            } else if (order.isRefunded() && order.getPartialRefundAmount() == 0 && "refunded".equalsIgnoreCase(order.getStatus())) {
+                log.info("[OrderService] Updated partial refund amount to {} for order {}", updates.getPartialRefundAmount(), id);
+            } else if (order.isRefunded() && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0) && "refunded".equalsIgnoreCase(order.getStatus())) {
                 // Secondary check: If it's a full refund and amount is missing, sync it to total
                 order.setPartialRefundAmount(order.getTotal());
+                log.info("[OrderService] Syncing full refund amount (total: {}) for order {}", order.getTotal(), id);
+            } else if (order.isRefunded() && "partially_refunded".equalsIgnoreCase(order.getStatus()) && order.getPartialRefundAmount() == 0) {
+                log.warn("[OrderService] Order {} is partially_refunded but has 0 amount. Investigation required.", id);
             }
             
             if (updates.getRefundedTaxAmount() > 0)
