@@ -25,7 +25,7 @@ public class TableService {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new java.util.ArrayList<>();
         }
-        return tableRepository.findAllByRestaurantId(restaurantId);
+        return tableRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
     }
 
     public List<RestaurantTable> getTablesByArea(String area) {
@@ -58,7 +58,7 @@ public class TableService {
                 table = opt.get();
         } else {
             // Robust lookup handling duplicates
-            List<RestaurantTable> tables = tableRepository.findAllByIdAndRestaurantId(id, restaurantId);
+            List<RestaurantTable> tables = tableRepository.findAllByIdAndRestaurantIdIgnoreCase(id, restaurantId);
             if (!tables.isEmpty()) {
                 table = tables.get(0);
                 if (tables.size() > 1) {
@@ -66,7 +66,7 @@ public class TableService {
                 }
             } else {
                 // Try finding by Name if ID lookup fails (common if ID is actually a name)
-                Optional<RestaurantTable> nameOpt = tableRepository.findByNameAndRestaurantId(id, restaurantId);
+                Optional<RestaurantTable> nameOpt = tableRepository.findByNameAndRestaurantIdIgnoreCase(id, restaurantId);
                 if (nameOpt.isPresent())
                     table = nameOpt.get();
             }
@@ -129,7 +129,7 @@ public class TableService {
     public Optional<RestaurantTable> updateTableStatus(String id, String status, String restaurantId) {
         Optional<RestaurantTable> tableOpt = (restaurantId == null || restaurantId.trim().isEmpty())
                 ? tableRepository.findById(id)
-                : tableRepository.findByIdAndRestaurantId(id, restaurantId);
+                : tableRepository.findByIdAndRestaurantIdIgnoreCase(id, restaurantId);
 
         return tableOpt.map(table -> {
             table.setStatus(status);

@@ -21,7 +21,7 @@ public class ProductService {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new java.util.ArrayList<>();
         }
-        return productRepository.findAllByRestaurantId(restaurantId);
+        return productRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
     }
 
     public Product saveProduct(Product product) {

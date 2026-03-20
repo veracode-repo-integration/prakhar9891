@@ -9,6 +9,8 @@ import java.util.Optional;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findAllByRestaurantId(String restaurantId);
+    List<Product> findAllByRestaurantIdIgnoreCase(String restaurantId);
 
     Optional<Product> findByIdAndRestaurantId(String id, String restaurantId);
+    Optional<Product> findByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);
 }

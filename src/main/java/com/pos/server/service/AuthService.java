@@ -170,7 +170,8 @@ public class AuthService {
             guest.setContact(phone);
             guest.setFirstName(providedName != null && !providedName.isEmpty() ? providedName : "Guest");
             guest.setRole("GUEST");
-            guest.setRestaurantId(restaurantId);
+            // Standardize to lowercase for consistency
+            guest.setRestaurantId(restaurantId != null ? restaurantId.toLowerCase() : null);
             guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
 
             User savedUser = userRepository.save(guest);
@@ -295,9 +296,11 @@ public class AuthService {
         }
 
         // Strict Tenant Isolation for everyone else
-        String userRid = user.getRestaurantId();
-        if (userRid == null || userRid.trim().isEmpty()) {
-            throw new RuntimeException("Forbidden: User has no assigned restaurant");
+        String userRid = user.getRestaurantId() != null ? user.getRestaurantId().toLowerCase() : null;
+        String compareHeader = headerId != null ? headerId.toLowerCase() : null;
+        
+        if (compareHeader != null && !compareHeader.equals(userRid) && !"SUPER_ADMIN".equalsIgnoreCase(user.getRole())) {
+            throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
         }
 
         return userRid.toLowerCase().trim();

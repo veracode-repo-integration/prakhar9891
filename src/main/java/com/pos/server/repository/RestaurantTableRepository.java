@@ -17,11 +17,15 @@ public interface RestaurantTableRepository extends JpaRepository<RestaurantTable
     List<RestaurantTable> findByStatus(String status);
 
     List<RestaurantTable> findAllByRestaurantId(String restaurantId);
+    List<RestaurantTable> findAllByRestaurantIdIgnoreCase(String restaurantId);
 
     Optional<RestaurantTable> findByIdAndRestaurantId(String id, String restaurantId);
+    Optional<RestaurantTable> findByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);
 
     // Fix for NonUniqueResultException if dirty data exists
     List<RestaurantTable> findAllByIdAndRestaurantId(String id, String restaurantId);
+    List<RestaurantTable> findAllByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);
 
     Optional<RestaurantTable> findByNameAndRestaurantId(String name, String restaurantId);
+    Optional<RestaurantTable> findByNameAndRestaurantIdIgnoreCase(String name, String restaurantId);
 }
