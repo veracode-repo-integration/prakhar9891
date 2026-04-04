@@ -24,6 +24,12 @@ public class Product {
     @Column(name = "tax_category")
     private String taxCategory;
 
+    @Column(name = "base_unit")
+    private String baseUnit = "Pc"; // Smallest unit, e.g. Gram, Pc
+
+    @Column(name = "display_unit")
+    private String displayUnit = "Pcs"; // User-facing unit, e.g. KG, Pcs
+
     @Column(name = "hsn_code")
     private String hsnCode = "9963"; // Default for restaurant services
 
