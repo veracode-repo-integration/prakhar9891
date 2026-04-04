@@ -16,7 +16,7 @@ public class Product {
     private String name;
     private double price;
     private String category;
-    private int stock;
+    private double stock;
     private String image;
     private String barcode;
     private double costPrice;
@@ -29,6 +29,9 @@ public class Product {
 
     @Column(columnDefinition = "TEXT")
     private String composition;
+
+    @Column(name = "selling_units", columnDefinition = "TEXT")
+    private String sellingUnits;
 
     @Column(name = "restaurant_id")
     private String restaurantId;

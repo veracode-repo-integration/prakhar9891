@@ -113,6 +113,8 @@ public class OrderService {
             item.setName(reqItem.getName());
             item.setPrice(reqItem.getPrice());
             item.setQty(reqItem.getQty());
+            item.setUnitLabel(reqItem.getUnitLabel());
+            item.setMultiplier(reqItem.getMultiplier());
             item.setModifiers(reqItem.getModifiers());
             item.setOrder(order);
             items.add(item);
@@ -123,17 +125,21 @@ public class OrderService {
                         rid);
                 if (pOpt.isPresent()) {
                     Product p = pOpt.get();
-                    int oldStock = p.getStock();
-                    p.setStock(Math.max(0, oldStock - reqItem.getQty()));
+                    double oldStock = p.getStock();
+                    double multiplier = (reqItem.getMultiplier() != null && reqItem.getMultiplier() > 0) 
+                                        ? reqItem.getMultiplier() : 1.0;
+                    double qtyChange = reqItem.getQty() * multiplier;
+                    
+                    p.setStock(Math.max(0, oldStock - qtyChange));
                     productRepository.save(p);
 
                     // Create Stock Log
                     StockLog logEntry = new StockLog();
                     logEntry.setId(UUID.randomUUID().toString());
                     logEntry.setProductId(p.getId());
-                    logEntry.setQtyChange(-reqItem.getQty());
+                    logEntry.setQtyChange(-qtyChange);
                     logEntry.setType("sale");
-                    logEntry.setReason("Sale: Order #" + order.getId());
+                    logEntry.setReason("Sale: " + item.getName() + (item.getUnitLabel() != null ? " (" + item.getUnitLabel() + ")" : ""));
                     logEntry.setUser(username != null ? username : "system");
                     logEntry.setCreatedAt(java.time.Instant.now().toString());
                     logEntry.setRestaurantId(rid);

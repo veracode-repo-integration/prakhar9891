@@ -20,6 +20,11 @@ public class OrderItem {
     private double price;
     private int qty;
 
+    @Column(name = "unit_label")
+    private String unitLabel; // e.g. '250 G', 'Half Plate'
+
+    private Double multiplier; // e.g. 0.25 (optional, 1.0 if null)
+
     @Column(name = "cart_id")
     private String cartId; // Unique ID for variant/modifier combo
 
