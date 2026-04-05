@@ -60,11 +60,12 @@ public class OnlineOrderController {
                 Product product = findProductByMapping(restaurantId, platform, eProductId);
                 if (product != null) {
                     OrderItem localItem = new OrderItem();
-                    localItem.setId(product.getId());
+                    localItem.setItemId(UUID.randomUUID().toString());
+                    localItem.setProductId(product.getId());
                     localItem.setName(product.getName());
                     localItem.setPrice(product.getPrice());
                     localItem.setQty(qty);
-                    localItem.setCategory(product.getCategory());
+                    localItem.setOrder(posOrder);
                     localItems.add(localItem);
                     subtotal += (product.getPrice() * qty);
                 }
