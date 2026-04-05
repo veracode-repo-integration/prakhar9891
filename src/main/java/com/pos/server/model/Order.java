@@ -136,7 +136,7 @@ public class Order {
     private String restaurantId;
 
     @Column(name = "is_online")
-    private boolean isOnline = false;
+    private Boolean isOnline = false;
 
     @Column(name = "aggregator_name")
     private String aggregatorName; // 'zomato', 'swiggy'
