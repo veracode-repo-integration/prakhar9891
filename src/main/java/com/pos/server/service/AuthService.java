@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -298,5 +299,31 @@ public class AuthService {
         }
 
         return userRid != null ? userRid : compareHeader;
+    }
+
+    @Transactional
+    public Map<String, Object> submitOnboarding(User user, Map<String, String> data) {
+        String businessName = data.get("businessName");
+        String businessType = data.get("businessType");
+        
+        // Generate a unique restaurant ID (slug)
+        String baseId = businessName.toLowerCase().trim().replaceAll("\\s+", "-");
+        String restaurantId = baseId + "-" + (int)(Math.random() * 9000 + 1000);
+
+        Restaurant r = new Restaurant();
+        r.setId(restaurantId);
+        r.setName(businessName);
+        r.setStatus("PENDING");
+        r.setBusinessType(businessType);
+        restaurantRepository.save(r);
+
+        user.setRestaurantId(restaurantId);
+        user.setRole("ADMIN");
+        userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("ok", true);
+        response.put("user", user);
+        return response;
     }
 }

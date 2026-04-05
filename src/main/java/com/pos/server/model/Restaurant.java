@@ -15,6 +15,7 @@ public class Restaurant {
     private String phone;
     private String email;
     private String logoUrl;
+    private String businessType; // NEW: To store business nature (Cafe, Hotel, etc.)
 
     // Subscription & Access Control
     private String status; // ACTIVE, SUSPENDED, TRIAL, INACTIVE
