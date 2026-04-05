@@ -49,6 +49,15 @@ public class Order {
     @Column(name = "tax_amount")
     private Double taxAmount;
 
+    @Column(name = "cgst_amount")
+    private Double cgstAmount = 0.0;
+
+    @Column(name = "sgst_amount")
+    private Double sgstAmount = 0.0;
+
+    @Column(name = "igst_amount")
+    private Double igstAmount = 0.0;
+
     private double total;
 
     // Timestamps

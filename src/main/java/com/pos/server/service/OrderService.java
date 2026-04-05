@@ -120,11 +120,18 @@ public class OrderService {
             items.add(item);
 
             // 1.1 Scoped Stock Reduction & Logging (Skip if disabled)
-            if (!disableStockTracking) {
-                Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(),
-                        rid);
-                if (pOpt.isPresent()) {
-                    Product p = pOpt.get();
+            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(), rid);
+            if (pOpt.isPresent()) {
+                Product p = pOpt.get();
+                
+                // --- SNAPSHOT HSN & TAX FOR AUDIT ---
+                item.setHsnCode(p.getHsnCode() != null ? p.getHsnCode() : "9963");
+                item.setTaxCategory(p.getTaxCategory());
+                double itemTax = item.getTaxAmount() != null ? item.getTaxAmount() : 0.0;
+                item.setCgstAmount(itemTax / 2.0);
+                item.setSgstAmount(itemTax / 2.0);
+
+                if (!disableStockTracking) {
                     double oldStock = p.getStock();
                     double multiplier = (reqItem.getMultiplier() != null && reqItem.getMultiplier() > 0) 
                                         ? reqItem.getMultiplier() : 1.0;
@@ -229,11 +236,18 @@ public class OrderService {
         order.setSubtotal(request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum());
         order.setTaxRate(request.getTaxRate());
         order.setTaxAmount(request.getTaxAmount());
+        
+        double totalTax = request.getTaxAmount(); // No null check needed as it is a primitive double
+        order.setCgstAmount(totalTax / 2.0);
+        order.setSgstAmount(totalTax / 2.0);
+        
         order.setTotal(request.getTotal());
 
         if (request.getDiscount() != null) {
             order.setDiscountType((String) request.getDiscount().get("type"));
-            order.setDiscountValue(Double.parseDouble(request.getDiscount().get("value").toString()));
+            try {
+                order.setDiscountValue(Double.parseDouble(request.getDiscount().get("value").toString()));
+            } catch (Exception e) {}
         }
 
         order.setPayLater(request.isPayLater());

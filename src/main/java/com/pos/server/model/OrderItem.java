@@ -35,8 +35,20 @@ public class OrderItem {
     @Column(name = "tax_amount")
     private Double taxAmount;
 
+    @Column(name = "cgst_amount")
+    private Double cgstAmount = 0.0;
+
+    @Column(name = "sgst_amount")
+    private Double sgstAmount = 0.0;
+
     @Column(name = "taxable_value")
     private Double taxableValue;
+
+    @Column(name = "hsn_code")
+    private String hsnCode = "9963";
+
+    @Column(name = "tax_category")
+    private String taxCategory;
 
     // Simplified modifiers storage to avoid join complexity and LOB issues
     @Column(name = "modifiers_json", columnDefinition = "TEXT")

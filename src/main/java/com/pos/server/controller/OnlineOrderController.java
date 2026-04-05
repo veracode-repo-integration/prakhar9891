@@ -82,15 +82,37 @@ public class OnlineOrderController {
                     localItem.setName(product.getName());
                     localItem.setPrice(product.getPrice());
                     localItem.setQty(qty);
+                    
+                    // --- SNAPSHOT HSN & TAX FOR AUDIT ---
+                    localItem.setHsnCode(product.getHsnCode() != null ? product.getHsnCode() : "9963");
+                    localItem.setTaxCategory(product.getTaxCategory());
+                    
+                    // Default to 5% if unspecified (Standard for restaurants)
+                    double taxRate = product.getTax() != null ? product.getTax() : 5.0;
+                    double itemTotal = product.getPrice() * qty;
+                    double taxAmount = (itemTotal * taxRate) / 100.0;
+                    
+                    localItem.setTaxRate(taxRate);
+                    localItem.setTaxAmount(taxAmount);
+                    localItem.setCgstAmount(taxAmount / 2.0);
+                    localItem.setSgstAmount(taxAmount / 2.0);
+                    localItem.setTaxableValue(itemTotal);
+
                     localItem.setOrder(posOrder);
                     localItems.add(localItem);
-                    subtotal += (product.getPrice() * qty);
+                    subtotal += itemTotal;
                 }
             }
 
             posOrder.setItems(localItems);
             posOrder.setSubtotal(subtotal);
-            posOrder.setTotal(subtotal); // Simplification: assuming aggregators handle tax/discount locally for now
+            
+            // Calculate total tax for the entire order
+            double totalTax = localItems.stream().mapToDouble(i -> i.getTaxAmount()).sum();
+            posOrder.setTaxAmount(totalTax);
+            posOrder.setCgstAmount(totalTax / 2.0);
+            posOrder.setSgstAmount(totalTax / 2.0);
+            posOrder.setTotal(subtotal + totalTax);
             
             // 4. Save & Notify
             Order saved = orderService.saveOrderDirectly(posOrder);
