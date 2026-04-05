@@ -42,7 +42,7 @@ public class CommonDataController {
                     .map(c -> ResponseEntity.ok(Map.of("ok", true, "customer", c)))
                     .orElse(ResponseEntity.ok(Map.of("ok", false, "message", "Customer not found")));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -54,7 +54,7 @@ public class CommonDataController {
             customer.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "customer", dataService.saveCustomer(customer)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -67,7 +67,7 @@ public class CommonDataController {
             dataService.deleteCustomer(id);
             return ResponseEntity.ok(Map.of("ok", true));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -80,7 +80,7 @@ public class CommonDataController {
             customer.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "customer", dataService.saveCustomer(customer)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -103,7 +103,7 @@ public class CommonDataController {
             expense.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "expense", dataService.saveExpense(expense)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -115,7 +115,7 @@ public class CommonDataController {
             dataService.deleteExpense(id);
             return ResponseEntity.ok(Map.of("ok", true));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -139,7 +139,7 @@ public class CommonDataController {
             note.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "note", dataService.saveCreditNote(note)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -151,7 +151,7 @@ public class CommonDataController {
             note.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "note", dataService.updateCreditNote(id, note)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -177,7 +177,7 @@ public class CommonDataController {
             tx.setRestaurantId(rid);
             return ResponseEntity.ok(Map.of("ok", true, "transaction", dataService.saveCreditTransaction(tx)));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -189,7 +189,7 @@ public class CommonDataController {
             dataService.deleteTransactionsByMobile(mobile, rid);
             return ResponseEntity.ok(Map.of("ok", true));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }

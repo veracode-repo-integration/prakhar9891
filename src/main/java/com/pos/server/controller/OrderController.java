@@ -30,7 +30,7 @@ public class OrderController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             return ResponseEntity.ok(orderService.getAllOrders(rid));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -43,7 +43,7 @@ public class OrderController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             return ResponseEntity.ok(orderService.getOrdersPaged(rid, page, size));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(org.springframework.data.domain.Page.empty());
+            return ResponseEntity.status(500).build();
         }
     }
 
@@ -93,7 +93,7 @@ public class OrderController {
             }
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
