@@ -109,9 +109,18 @@ public class OnlineOrderController {
         for (Product p : allProducts) {
             if (p.getExternalMappings() == null) continue;
             try {
-                Map<String, String> mappings = objectMapper.readValue(p.getExternalMappings(), Map.class);
-                if (externalId.equals(mappings.get(platform))) {
-                    return p;
+                Map<String, Object> mappings = objectMapper.readValue(p.getExternalMappings(), Map.class);
+                Object platformMapping = mappings.get(platform);
+                
+                if (platformMapping instanceof Map) {
+                    Map<String, Object> mapObj = (Map<String, Object>) platformMapping;
+                    if (externalId.equals(mapObj.get("id"))) {
+                        return p;
+                    }
+                } else if (platformMapping instanceof String) {
+                    if (externalId.equals(platformMapping)) {
+                        return p;
+                    }
                 }
             } catch (Exception e) { }
         }
