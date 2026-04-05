@@ -47,7 +47,19 @@ public class OnlineOrderController {
             String externalId = (String) orderData.get("id");
             String platform = (String) orderData.get("platform"); // 'ZOMATO', 'SWIGGY'
             
-            // 2. Normalize Items
+            // 2. Initialize POS Order
+            Order posOrder = new Order();
+            posOrder.setId("ONL-" + externalId);
+            posOrder.setExternalId(externalId);
+            posOrder.setAggregatorName(platform);
+            posOrder.setOnline(true);
+            posOrder.setRestaurantId(restaurantId);
+            posOrder.setOrderType("takeaway");
+            posOrder.setKitchenStatus("pending");
+            posOrder.setStatus("pending");
+            posOrder.setDate(new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date()));
+
+            // 3. Normalize Items
             List<Map<String, Object>> externalItems = (List<Map<String, Object>>) orderData.get("items");
             List<OrderItem> localItems = new ArrayList<>();
             double subtotal = 0;
@@ -71,20 +83,9 @@ public class OnlineOrderController {
                 }
             }
 
-            // 3. Create POS Order
-            Order posOrder = new Order();
-            posOrder.setId("ONL-" + externalId);
-            posOrder.setExternalId(externalId);
-            posOrder.setAggregatorName(platform);
-            posOrder.setOnline(true);
-            posOrder.setRestaurantId(restaurantId);
             posOrder.setItems(localItems);
             posOrder.setSubtotal(subtotal);
             posOrder.setTotal(subtotal); // Simplification: assuming aggregators handle tax/discount locally for now
-            posOrder.setOrderType("takeaway");
-            posOrder.setKitchenStatus("pending");
-            posOrder.setStatus("pending");
-            posOrder.setDate(new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").format(new Date()));
             
             // 4. Save & Notify
             Order saved = orderService.saveOrderDirectly(posOrder);
