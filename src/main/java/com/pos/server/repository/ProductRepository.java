@@ -13,4 +13,7 @@ public interface ProductRepository extends JpaRepository<Product, String> {
 
     Optional<Product> findByIdAndRestaurantId(String id, String restaurantId);
     Optional<Product> findByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT MAX(p.updatedAt) FROM Product p WHERE p.restaurantId = :restaurantId")
+    java.time.LocalDateTime findLatestUpdateByRestaurantId(String restaurantId);
 }

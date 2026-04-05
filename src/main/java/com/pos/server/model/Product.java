@@ -2,6 +2,8 @@ package com.pos.server.model;
 
 import javax.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
 
 @Entity
 @Data
@@ -41,4 +43,8 @@ public class Product {
 
     @Column(name = "restaurant_id")
     private String restaurantId;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
