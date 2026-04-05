@@ -52,7 +52,7 @@ public class OnlineOrderController {
             posOrder.setId("ONL-" + externalId);
             posOrder.setExternalId(externalId);
             posOrder.setAggregatorName(platform);
-            posOrder.setOnline(true);
+            posOrder.setIsOnline(true);
             posOrder.setRestaurantId(restaurantId);
             posOrder.setOrderType("takeaway");
             posOrder.setKitchenStatus("pending");

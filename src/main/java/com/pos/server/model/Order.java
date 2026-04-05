@@ -89,11 +89,11 @@ public class Order {
     private String status = "completed";
 
     @Column(name = "is_refunded")
-    private boolean isRefunded = false;
+    private Boolean isRefunded = false;
 
     // Pay Later
     @Column(name = "pay_later")
-    private boolean payLater = false;
+    private Boolean payLater = false;
 
     @Column(name = "pay_later_amount")
     private double payLaterAmount = 0.0;

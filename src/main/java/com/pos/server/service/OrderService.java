@@ -269,7 +269,7 @@ public class OrderService {
         }
 
         // --- ADD TO CREDIT LEDGER IF PAY LATER ---
-        if (savedOrder.isPayLater() && savedOrder.getCustomer() != null) {
+        if (Boolean.TRUE.equals(savedOrder.getPayLater()) && savedOrder.getCustomer() != null) {
             CreditTransaction tx = new CreditTransaction();
             tx.setId("ORD-" + savedOrder.getId());
             tx.setMobile(savedOrder.getCustomer().getMobile());
@@ -315,7 +315,7 @@ public class OrderService {
             if (updates.getStatus() != null && 
                 (updates.getStatus().equalsIgnoreCase("refunded") || 
                  updates.getStatus().equalsIgnoreCase("partially_refunded"))) {
-                order.setRefunded(true);
+                order.setIsRefunded(true);
             }
 
             // ONLY update refund amount if it's explicitly provided (> 0) 
@@ -323,11 +323,11 @@ public class OrderService {
             if (updates.getPartialRefundAmount() > 0) {
                 order.setPartialRefundAmount(updates.getPartialRefundAmount());
                 log.info("[OrderService] Updated partial refund amount to {} for order {}", updates.getPartialRefundAmount(), id);
-            } else if (order.isRefunded() && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0) && "refunded".equalsIgnoreCase(order.getStatus())) {
+            } else if (Boolean.TRUE.equals(order.getIsRefunded()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0) && "refunded".equalsIgnoreCase(order.getStatus())) {
                 // Secondary check: If it's a full refund and amount is missing, sync it to total
                 order.setPartialRefundAmount(order.getTotal());
                 log.info("[OrderService] Syncing full refund amount (total: {}) for order {}", order.getTotal(), id);
-            } else if (order.isRefunded() && "partially_refunded".equalsIgnoreCase(order.getStatus()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0)) {
+            } else if (Boolean.TRUE.equals(order.getIsRefunded()) && "partially_refunded".equalsIgnoreCase(order.getStatus()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0)) {
                 // Attempt to auto-recalculate from items JSON if available
                 String json = updates.getRefundedItemsJson() != null ? updates.getRefundedItemsJson() : order.getRefundedItemsJson();
                 if (json != null && !json.isEmpty()) {
