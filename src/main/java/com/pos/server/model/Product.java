@@ -50,4 +50,7 @@ public class Product {
 
     @Column(name = "external_mappings", columnDefinition = "TEXT")
     private String externalMappings; // JSON for aggregator IDs (Zomato, Swiggy)
+
+    @Column(name = "online_availability")
+    private String onlineAvailability = "available"; // 'available' or 'out_of_stock'
 }

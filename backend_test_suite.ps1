@@ -45,6 +45,11 @@ try {
         $Update = @{ price = 160 } | ConvertTo-Json
         $ResUp = Invoke-RestMethod -Uri "$BaseUrl/pos-products/$ProdId" -Method Put -Body $Update -ContentType "application/json"
         Assert-Success ($ResUp.ok -eq $true) "Update Product"
+
+        # Online Availability Update
+        $OnlineUpdate = @{ status = "out_of_stock" } | ConvertTo-Json
+        $ResOnline = Invoke-RestMethod -Uri "$BaseUrl/pos-products/$ProdId/online-availability" -Method Put -Body $OnlineUpdate -ContentType "application/json"
+        Assert-Success ($ResOnline.ok -eq $true -and $ResOnline.product.onlineAvailability -eq "out_of_stock") "Update Online Availability"
     }
     else {
         Write-Output "SKIP: Update Product (Create failed)"

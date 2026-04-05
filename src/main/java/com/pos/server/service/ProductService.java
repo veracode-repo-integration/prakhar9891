@@ -165,6 +165,17 @@ public class ProductService {
                         product.setTaxCategory(updates.getTaxCategory());
                     if (updates.getHsnCode() != null)
                         product.setHsnCode(updates.getHsnCode());
+                    if (updates.getOnlineAvailability() != null)
+                        product.setOnlineAvailability(updates.getOnlineAvailability());
+                    return productRepository.save(product);
+                })
+                .orElse(null);
+    }
+
+    public Product updateOnlineAvailability(String id, String status) {
+        return productRepository.findById(id)
+                .map(product -> {
+                    product.setOnlineAvailability(status);
                     return productRepository.save(product);
                 })
                 .orElse(null);
