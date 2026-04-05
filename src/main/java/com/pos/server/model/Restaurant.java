@@ -100,4 +100,7 @@ public class Restaurant {
         updatedAt = System.currentTimeMillis();
         saveFeaturesInternal();
     }
+
+    @Column(name = "online_status")
+    private String onlineStatus = "OPEN"; // OPEN, CLOSED
 }

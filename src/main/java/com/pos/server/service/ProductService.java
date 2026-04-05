@@ -24,6 +24,10 @@ public class ProductService {
         return productRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
     }
 
+    public List<Product> getAllProductsNoCache(String restaurantId) {
+        return productRepository.findAllByRestaurantIdIgnoreCase(restaurantId.toLowerCase().trim());
+    }
+
     public Product saveProduct(Product product) {
         if (product.getId() == null || product.getId().isEmpty()) {
             product.setId("prod-" + UUID.randomUUID().toString());

@@ -47,4 +47,7 @@ public class Product {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "external_mappings", columnDefinition = "TEXT")
+    private String externalMappings; // JSON for aggregator IDs (Zomato, Swiggy)
 }

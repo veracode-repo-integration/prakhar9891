@@ -134,4 +134,16 @@ public class Order {
 
     @Column(name = "restaurant_id")
     private String restaurantId;
+
+    @Column(name = "is_online")
+    private boolean isOnline = false;
+
+    @Column(name = "aggregator_name")
+    private String aggregatorName; // 'zomato', 'swiggy'
+
+    @Column(name = "external_id")
+    private String externalId;
+
+    @Column(name = "rider_info", columnDefinition = "TEXT")
+    private String riderInfo; // JSON string
 }

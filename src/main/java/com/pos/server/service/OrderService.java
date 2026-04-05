@@ -398,4 +398,19 @@ public class OrderService {
         }
         return null;
     }
+
+    @Transactional
+    public Order saveOrderDirectly(Order order) {
+        log.info("Saving order directly: {} for restaurant: {}", order.getId(), order.getRestaurantId());
+        if (order.getId() == null) {
+            order.setId(UUID.randomUUID().toString());
+        }
+        if (order.getInvoiceNumber() == null) {
+            order.setInvoiceNumber(commonDataService.getNextInvoiceNumber(order.getRestaurantId()));
+        }
+        if (order.getCreatedAt() == 0) {
+            order.setCreatedAt(System.currentTimeMillis());
+        }
+        return orderRepository.saveAndFlush(order);
+    }
 }
