@@ -16,13 +16,13 @@ public class Product {
     @Id
     private String id;
     private String name;
-    private double price;
+    private Double price;
     private String category;
-    private double stock;
+    private Double stock;
     private String image;
     private String barcode;
-    private double costPrice;
-    private double tax;
+    private Double costPrice;
+    private Double tax;
     @Column(name = "tax_category")
     private String taxCategory;
 

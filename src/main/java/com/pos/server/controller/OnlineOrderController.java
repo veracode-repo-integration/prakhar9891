@@ -65,8 +65,13 @@ public class OnlineOrderController {
             double subtotal = 0;
 
             for (Map<String, Object> eItem : externalItems) {
-                String eProductId = (String) eItem.get("id");
-                int qty = (int) eItem.get("quantity");
+                Object rawId = eItem.get("id");
+                Object rawQty = eItem.get("quantity");
+                
+                if (rawId == null || rawQty == null) continue;
+                
+                String eProductId = String.valueOf(rawId);
+                int qty = (rawQty instanceof Number) ? ((Number) rawQty).intValue() : Integer.parseInt(String.valueOf(rawQty));
                 
                 // Find local product by mapping
                 Product product = findProductByMapping(restaurantId, platform, eProductId);
@@ -114,11 +119,11 @@ public class OnlineOrderController {
                 
                 if (platformMapping instanceof Map) {
                     Map<String, Object> mapObj = (Map<String, Object>) platformMapping;
-                    if (externalId.equals(mapObj.get("id"))) {
+                    if (externalId.equals(String.valueOf(mapObj.get("id")))) {
                         return p;
                     }
-                } else if (platformMapping instanceof String) {
-                    if (externalId.equals(platformMapping)) {
+                } else if (platformMapping != null) {
+                    if (externalId.equals(String.valueOf(platformMapping))) {
                         return p;
                     }
                 }
