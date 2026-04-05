@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/otp-login", "/api/auth/check-user",
                         "/api/dine-in/scan",
+                        "/api/webhooks/**",
                         "/ws-pos/**")
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
