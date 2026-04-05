@@ -96,6 +96,33 @@ public class OrderController {
             return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+    @PostMapping("/pos-orders/{id}/refund")
+    public ResponseEntity<?> refundOrder(@PathVariable String id, @RequestBody Order updates,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            
+            // Default status to refunded if not explicitly provided
+            if (updates.getStatus() == null) {
+                updates.setStatus("refunded");
+            }
+            
+            Order updated = orderService.updateOrder(id, updates, rid);
+            if (updated != null) {
+                org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder
+                        .getContext().getAuthentication();
+                String actingUser = (authInfo != null) ? authInfo.getName() : "system";
 
+                messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                        "order", updated,
+                        "actingUser", actingUser,
+                        "type", "ORDER_REFUND"));
+                return ResponseEntity.ok(Map.of("ok", true, "order", updated));
+            }
+            return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 
 }
