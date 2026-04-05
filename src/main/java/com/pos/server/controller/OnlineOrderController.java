@@ -76,11 +76,24 @@ public class OnlineOrderController {
                 // Find local product by mapping
                 Product product = findProductByMapping(restaurantId, platform, eProductId);
                 if (product != null) {
+                    // Use mapped price if available, else standard price
+                    double finalPrice = product.getPrice();
+                    try {
+                        Map<String, Object> mappings = objectMapper.readValue(product.getExternalMappings(), Map.class);
+                        Object mp = mappings.get(platform);
+                        if (mp instanceof Map) {
+                            Object priceObj = ((Map) mp).get("price");
+                            if (priceObj != null) {
+                                finalPrice = Double.parseDouble(String.valueOf(priceObj));
+                            }
+                        }
+                    } catch (Exception e) {}
+
                     OrderItem localItem = new OrderItem();
                     localItem.setItemId(UUID.randomUUID().toString());
                     localItem.setProductId(product.getId());
                     localItem.setName(product.getName());
-                    localItem.setPrice(product.getPrice());
+                    localItem.setPrice(finalPrice);
                     localItem.setQty(qty);
                     
                     // --- SNAPSHOT HSN & TAX FOR AUDIT ---
@@ -89,7 +102,7 @@ public class OnlineOrderController {
                     
                     // Default to 5% if unspecified (Standard for restaurants)
                     double taxRate = product.getTax() != null ? product.getTax() : 5.0;
-                    double itemTotal = product.getPrice() * qty;
+                    double itemTotal = finalPrice * qty;
                     double taxAmount = (itemTotal * taxRate) / 100.0;
                     
                     localItem.setTaxRate(taxRate);
