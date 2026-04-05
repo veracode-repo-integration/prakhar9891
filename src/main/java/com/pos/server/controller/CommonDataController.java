@@ -22,13 +22,13 @@ public class CommonDataController {
 
     // Customers
     @GetMapping("/customers")
-    public List<Customer> getCustomers(
+    public ResponseEntity<?> getCustomers(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
-            return dataService.getAllCustomers(rid);
+            return ResponseEntity.ok(dataService.getAllCustomers(rid));
         } catch (Exception e) {
-            return new java.util.ArrayList<>();
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -86,12 +86,12 @@ public class CommonDataController {
 
     // Expenses
     @GetMapping("/expenses")
-    public List<Expense> getExpenses(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+    public ResponseEntity<?> getExpenses(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
-            return dataService.getAllExpenses(rid);
+            return ResponseEntity.ok(dataService.getAllExpenses(rid));
         } catch (Exception e) {
-            return new java.util.ArrayList<>();
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -121,13 +121,13 @@ public class CommonDataController {
 
     // Credit Notes
     @GetMapping("/credit-notes")
-    public List<CreditNote> getCreditNotes(
+    public ResponseEntity<?> getCreditNotes(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
-            return dataService.getAllCreditNotes(rid);
+            return ResponseEntity.ok(dataService.getAllCreditNotes(rid));
         } catch (Exception e) {
-            return new java.util.ArrayList<>();
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -157,15 +157,15 @@ public class CommonDataController {
 
     // Credit Transactions (Ledger)
     @GetMapping("/credit-transactions")
-    public List<CreditTransaction> getCreditTransactions(@RequestParam(required = false) String mobile,
+    public ResponseEntity<?> getCreditTransactions(@RequestParam(required = false) String mobile,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
             if (mobile != null)
-                return dataService.getTransactionsByMobile(mobile, rid);
-            return dataService.getAllCreditTransactions(rid);
+                return ResponseEntity.ok(dataService.getTransactionsByMobile(mobile, rid));
+            return ResponseEntity.ok(dataService.getAllCreditTransactions(rid));
         } catch (Exception e) {
-            return new java.util.ArrayList<>();
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
         }
     }
 
