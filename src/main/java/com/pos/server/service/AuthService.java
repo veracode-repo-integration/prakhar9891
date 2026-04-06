@@ -162,6 +162,13 @@ public class AuthService {
             User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
             // BYPASS subscription check for Dine-In sessions (allows admins to test as guests)
             if (restaurantId == null || restaurantId.trim().isEmpty()) {
+                // If the user was previously created as a GUEST (from a dine-in flow) and is now
+                // logging in to the merchant app, upgrade their role to ADMIN.
+                if ("GUEST".equalsIgnoreCase(user.getRole())) {
+                    System.out.println("[AuthService] Upgrading existing GUEST to ADMIN role for merchant login: " + phone);
+                    user.setRole("ADMIN");
+                    userRepository.save(user);
+                }
                 checkSubscription(user);
             } else {
                 System.out.println("[Auth] Bypassing subscription check for existing user in Dine-In context");
@@ -295,7 +302,12 @@ public class AuthService {
         String compareHeader = headerId != null ? headerId.toLowerCase() : null;
         
         if (compareHeader != null && !compareHeader.equals(userRid) && !"GUEST".equalsIgnoreCase(user.getRole())) {
-            throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
+            // Also allow prefix/suffix matches: header "divya" should match stored ID "divya-1234"
+            // This handles the case where QR codes/URLs use the short slug but the DB stores the full ID.
+            boolean isPrefix = (userRid != null && (userRid.startsWith(compareHeader) || compareHeader.startsWith(userRid)));
+            if (!isPrefix) {
+                throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
+            }
         }
 
         return userRid != null ? userRid : compareHeader;
