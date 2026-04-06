@@ -32,6 +32,8 @@ public class UserController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             List<User> users = userRepository.findAllByRestaurantId(rid);
             return ResponseEntity.ok(users.stream()
+                .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                .filter(u -> u.getUsername() != null && !u.getUsername().startsWith("deleted_"))
                 .map(u -> new UserResponse(
                         u.getDbId(),
                         u.getUsername(),
