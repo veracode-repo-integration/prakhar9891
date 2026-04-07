@@ -80,4 +80,19 @@ public class ProductController {
         return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Product not found"));
     }
 
+    @PutMapping("/{id}/online-availability")
+    public ResponseEntity<?> updateOnlineAvailability(@PathVariable String id, @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        String rid = authService.validateRestaurantAccess(restaurantId);
+        String status = body.get("status");
+        if (status == null) {
+            return ResponseEntity.status(400).body(Map.of("ok", false, "message", "Status is required"));
+        }
+        Product updated = productService.updateOnlineAvailability(id, status);
+        if (updated != null) {
+            return ResponseEntity.ok(Map.of("ok", true, "product", updated));
+        }
+        return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Product not found"));
+    }
+
 }

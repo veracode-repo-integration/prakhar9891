@@ -23,15 +23,17 @@ public class UserController {
     @Autowired
     private com.pos.server.service.AuthService authService;
 
-    // List all users - ADMIN ONLY
+    // List all users - ADMIN OR SUPER_ADMIN ONLY
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<?> getAllUsers(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
             List<User> users = userRepository.findAllByRestaurantId(rid);
             return ResponseEntity.ok(users.stream()
+                .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()))
+                .filter(u -> u.getUsername() != null && !u.getUsername().startsWith("deleted_"))
                 .map(u -> new UserResponse(
                         u.getDbId(),
                         u.getUsername(),

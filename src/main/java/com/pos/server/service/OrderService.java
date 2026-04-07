@@ -113,27 +113,40 @@ public class OrderService {
             item.setName(reqItem.getName());
             item.setPrice(reqItem.getPrice());
             item.setQty(reqItem.getQty());
+            item.setUnitLabel(reqItem.getUnitLabel());
+            item.setMultiplier(reqItem.getMultiplier());
             item.setModifiers(reqItem.getModifiers());
             item.setOrder(order);
             items.add(item);
 
             // 1.1 Scoped Stock Reduction & Logging (Skip if disabled)
-            if (!disableStockTracking) {
-                Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(),
-                        rid);
-                if (pOpt.isPresent()) {
-                    Product p = pOpt.get();
-                    int oldStock = p.getStock();
-                    p.setStock(Math.max(0, oldStock - reqItem.getQty()));
+            Optional<Product> pOpt = productRepository.findByIdAndRestaurantId(reqItem.getProductId(), rid);
+            if (pOpt.isPresent()) {
+                Product p = pOpt.get();
+                
+                // --- SNAPSHOT HSN & TAX FOR AUDIT ---
+                item.setHsnCode(p.getHsnCode() != null ? p.getHsnCode() : "9963");
+                item.setTaxCategory(p.getTaxCategory());
+                double itemTax = item.getTaxAmount() != null ? item.getTaxAmount() : 0.0;
+                item.setCgstAmount(itemTax / 2.0);
+                item.setSgstAmount(itemTax / 2.0);
+
+                if (!disableStockTracking) {
+                    double oldStock = p.getStock();
+                    double multiplier = (reqItem.getMultiplier() != null && reqItem.getMultiplier() > 0) 
+                                        ? reqItem.getMultiplier() : 1.0;
+                    double qtyChange = reqItem.getQty() * multiplier;
+                    
+                    p.setStock(Math.max(0, oldStock - qtyChange));
                     productRepository.save(p);
 
                     // Create Stock Log
                     StockLog logEntry = new StockLog();
                     logEntry.setId(UUID.randomUUID().toString());
                     logEntry.setProductId(p.getId());
-                    logEntry.setQtyChange(-reqItem.getQty());
+                    logEntry.setQtyChange(-qtyChange);
                     logEntry.setType("sale");
-                    logEntry.setReason("Sale: Order #" + order.getId());
+                    logEntry.setReason("Sale: " + item.getName() + (item.getUnitLabel() != null ? " (" + item.getUnitLabel() + ")" : ""));
                     logEntry.setUser(username != null ? username : "system");
                     logEntry.setCreatedAt(java.time.Instant.now().toString());
                     logEntry.setRestaurantId(rid);
@@ -223,11 +236,18 @@ public class OrderService {
         order.setSubtotal(request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum());
         order.setTaxRate(request.getTaxRate());
         order.setTaxAmount(request.getTaxAmount());
+        
+        double totalTax = request.getTaxAmount(); // No null check needed as it is a primitive double
+        order.setCgstAmount(totalTax / 2.0);
+        order.setSgstAmount(totalTax / 2.0);
+        
         order.setTotal(request.getTotal());
 
         if (request.getDiscount() != null) {
             order.setDiscountType((String) request.getDiscount().get("type"));
-            order.setDiscountValue(Double.parseDouble(request.getDiscount().get("value").toString()));
+            try {
+                order.setDiscountValue(Double.parseDouble(request.getDiscount().get("value").toString()));
+            } catch (Exception e) {}
         }
 
         order.setPayLater(request.isPayLater());
@@ -263,7 +283,7 @@ public class OrderService {
         }
 
         // --- ADD TO CREDIT LEDGER IF PAY LATER ---
-        if (savedOrder.isPayLater() && savedOrder.getCustomer() != null) {
+        if (Boolean.TRUE.equals(savedOrder.getPayLater()) && savedOrder.getCustomer() != null) {
             CreditTransaction tx = new CreditTransaction();
             tx.setId("ORD-" + savedOrder.getId());
             tx.setMobile(savedOrder.getCustomer().getMobile());
@@ -309,7 +329,7 @@ public class OrderService {
             if (updates.getStatus() != null && 
                 (updates.getStatus().equalsIgnoreCase("refunded") || 
                  updates.getStatus().equalsIgnoreCase("partially_refunded"))) {
-                order.setRefunded(true);
+                order.setIsRefunded(true);
             }
 
             // ONLY update refund amount if it's explicitly provided (> 0) 
@@ -317,11 +337,11 @@ public class OrderService {
             if (updates.getPartialRefundAmount() > 0) {
                 order.setPartialRefundAmount(updates.getPartialRefundAmount());
                 log.info("[OrderService] Updated partial refund amount to {} for order {}", updates.getPartialRefundAmount(), id);
-            } else if (order.isRefunded() && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0) && "refunded".equalsIgnoreCase(order.getStatus())) {
+            } else if (Boolean.TRUE.equals(order.getIsRefunded()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0) && "refunded".equalsIgnoreCase(order.getStatus())) {
                 // Secondary check: If it's a full refund and amount is missing, sync it to total
                 order.setPartialRefundAmount(order.getTotal());
                 log.info("[OrderService] Syncing full refund amount (total: {}) for order {}", order.getTotal(), id);
-            } else if (order.isRefunded() && "partially_refunded".equalsIgnoreCase(order.getStatus()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0)) {
+            } else if (Boolean.TRUE.equals(order.getIsRefunded()) && "partially_refunded".equalsIgnoreCase(order.getStatus()) && (order.getPartialRefundAmount() == 0 || order.getPartialRefundAmount() == 0.0)) {
                 // Attempt to auto-recalculate from items JSON if available
                 String json = updates.getRefundedItemsJson() != null ? updates.getRefundedItemsJson() : order.getRefundedItemsJson();
                 if (json != null && !json.isEmpty()) {
@@ -391,5 +411,20 @@ public class OrderService {
             return orderRepository.save(order);
         }
         return null;
+    }
+
+    @Transactional
+    public Order saveOrderDirectly(Order order) {
+        log.info("Saving order directly: {} for restaurant: {}", order.getId(), order.getRestaurantId());
+        if (order.getId() == null) {
+            order.setId(UUID.randomUUID().toString());
+        }
+        if (order.getInvoiceNumber() == null) {
+            order.setInvoiceNumber(commonDataService.getNextInvoiceNumber(order.getRestaurantId()));
+        }
+        if (order.getCreatedAt() == 0) {
+            order.setCreatedAt(System.currentTimeMillis());
+        }
+        return orderRepository.saveAndFlush(order);
     }
 }

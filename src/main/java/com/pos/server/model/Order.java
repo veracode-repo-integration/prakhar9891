@@ -49,6 +49,15 @@ public class Order {
     @Column(name = "tax_amount")
     private Double taxAmount;
 
+    @Column(name = "cgst_amount")
+    private Double cgstAmount = 0.0;
+
+    @Column(name = "sgst_amount")
+    private Double sgstAmount = 0.0;
+
+    @Column(name = "igst_amount")
+    private Double igstAmount = 0.0;
+
     private double total;
 
     // Timestamps
@@ -89,11 +98,11 @@ public class Order {
     private String status = "completed";
 
     @Column(name = "is_refunded")
-    private boolean isRefunded = false;
+    private Boolean isRefunded = false;
 
     // Pay Later
     @Column(name = "pay_later")
-    private boolean payLater = false;
+    private Boolean payLater = false;
 
     @Column(name = "pay_later_amount")
     private double payLaterAmount = 0.0;
@@ -134,4 +143,16 @@ public class Order {
 
     @Column(name = "restaurant_id")
     private String restaurantId;
+
+    @Column(name = "is_online")
+    private Boolean isOnline = false;
+
+    @Column(name = "aggregator_name")
+    private String aggregatorName; // 'zomato', 'swiggy'
+
+    @Column(name = "external_id")
+    private String externalId;
+
+    @Column(name = "rider_info", columnDefinition = "TEXT")
+    private String riderInfo; // JSON string
 }

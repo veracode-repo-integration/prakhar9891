@@ -76,7 +76,7 @@ public class SettingsController {
 
             return ResponseEntity.ok(node);
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 

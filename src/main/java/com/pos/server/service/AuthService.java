@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -161,6 +162,13 @@ public class AuthService {
             User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
             // BYPASS subscription check for Dine-In sessions (allows admins to test as guests)
             if (restaurantId == null || restaurantId.trim().isEmpty()) {
+                // If the user was previously created as a GUEST (from a dine-in flow) and is now
+                // logging in to the merchant app, upgrade their role to ADMIN.
+                if ("GUEST".equalsIgnoreCase(user.getRole())) {
+                    System.out.println("[AuthService] Upgrading existing GUEST to ADMIN role for merchant login: " + phone);
+                    user.setRole("ADMIN");
+                    userRepository.save(user);
+                }
                 checkSubscription(user);
             } else {
                 System.out.println("[Auth] Bypassing subscription check for existing user in Dine-In context");
@@ -294,9 +302,40 @@ public class AuthService {
         String compareHeader = headerId != null ? headerId.toLowerCase() : null;
         
         if (compareHeader != null && !compareHeader.equals(userRid) && !"GUEST".equalsIgnoreCase(user.getRole())) {
-            throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
+            // Also allow prefix/suffix matches: header "divya" should match stored ID "divya-1234"
+            // This handles the case where QR codes/URLs use the short slug but the DB stores the full ID.
+            boolean isPrefix = (userRid != null && (userRid.startsWith(compareHeader) || compareHeader.startsWith(userRid)));
+            if (!isPrefix) {
+                throw new RuntimeException("Access Denied: You do not have access to this restaurant's data");
+            }
         }
 
         return userRid != null ? userRid : compareHeader;
+    }
+
+    @Transactional
+    public Map<String, Object> submitOnboarding(User user, Map<String, String> data) {
+        String businessName = data.get("businessName");
+        String businessType = data.get("businessType");
+        
+        // Generate a unique restaurant ID (slug)
+        String baseId = businessName.toLowerCase().trim().replaceAll("\\s+", "-");
+        String restaurantId = baseId + "-" + (int)(Math.random() * 9000 + 1000);
+
+        Restaurant r = new Restaurant();
+        r.setId(restaurantId);
+        r.setName(businessName);
+        r.setStatus("PENDING");
+        r.setBusinessType(businessType);
+        restaurantRepository.save(r);
+
+        user.setRestaurantId(restaurantId);
+        user.setRole("ADMIN");
+        userRepository.save(user);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("ok", true);
+        response.put("user", user);
+        return response;
     }
 }

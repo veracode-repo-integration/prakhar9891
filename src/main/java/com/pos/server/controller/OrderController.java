@@ -25,17 +25,17 @@ public class OrderController {
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/pos-orders")
-    public ResponseEntity<List<Order>> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+    public ResponseEntity<?> getOrders(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
             return ResponseEntity.ok(orderService.getAllOrders(rid));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage() != null ? e.getMessage() : "Unknown Error"));
         }
     }
 
     @GetMapping("/v2/pos-orders")
-    public ResponseEntity<org.springframework.data.domain.Page<Order>> getOrdersPaged(
+    public ResponseEntity<?> getOrdersPaged(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
@@ -43,7 +43,7 @@ public class OrderController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             return ResponseEntity.ok(orderService.getOrdersPaged(rid, page, size));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(org.springframework.data.domain.Page.empty());
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage() != null ? e.getMessage() : "Unknown Error"));
         }
     }
 
@@ -93,9 +93,36 @@ public class OrderController {
             }
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+    @PostMapping("/pos-orders/{id}/refund")
+    public ResponseEntity<?> refundOrder(@PathVariable String id, @RequestBody Order updates,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            
+            // Default status to refunded if not explicitly provided
+            if (updates.getStatus() == null) {
+                updates.setStatus("refunded");
+            }
+            
+            Order updated = orderService.updateOrder(id, updates, rid);
+            if (updated != null) {
+                org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder
+                        .getContext().getAuthentication();
+                String actingUser = (authInfo != null) ? authInfo.getName() : "system";
 
+                messagingTemplate.convertAndSend("/topic/orders", Map.of(
+                        "order", updated,
+                        "actingUser", actingUser,
+                        "type", "ORDER_REFUND"));
+                return ResponseEntity.ok(Map.of("ok", true, "order", updated));
+            }
+            return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 
 }

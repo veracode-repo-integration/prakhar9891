@@ -24,6 +24,10 @@ public class ProductService {
         return productRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
     }
 
+    public List<Product> getAllProductsNoCache(String restaurantId) {
+        return productRepository.findAllByRestaurantIdIgnoreCase(restaurantId.toLowerCase().trim());
+    }
+
     public Product saveProduct(Product product) {
         if (product.getId() == null || product.getId().isEmpty()) {
             product.setId("prod-" + UUID.randomUUID().toString());
@@ -121,11 +125,11 @@ public class ProductService {
                 .map(product -> {
                     if (updates.getName() != null)
                         product.setName(updates.getName());
-                    if (updates.getPrice() > 0)
+                    if (updates.getPrice() != null)
                         product.setPrice(updates.getPrice());
                     if (updates.getCategory() != null)
                         product.setCategory(updates.getCategory());
-                    if (updates.getStock() >= 0)
+                    if (updates.getStock() != null)
                         product.setStock(updates.getStock());
 
                     if (updates.getImage() != null) {
@@ -153,14 +157,28 @@ public class ProductService {
                         product.setBarcode(updates.getBarcode());
                     if (updates.getComposition() != null)
                         product.setComposition(updates.getComposition());
-                    if (updates.getCostPrice() >= 0)
+                    if (updates.getCostPrice() != null)
                         product.setCostPrice(updates.getCostPrice());
-                    if (updates.getTax() >= 0)
+                    if (updates.getTax() != null)
                         product.setTax(updates.getTax());
                     if (updates.getTaxCategory() != null)
                         product.setTaxCategory(updates.getTaxCategory());
                     if (updates.getHsnCode() != null)
                         product.setHsnCode(updates.getHsnCode());
+                    if (updates.getOnlineAvailability() != null)
+                        product.setOnlineAvailability(updates.getOnlineAvailability());
+                    if (updates.getExternalMappings() != null)
+                        product.setExternalMappings(updates.getExternalMappings());
+
+                    return productRepository.save(product);
+                })
+                .orElse(null);
+    }
+
+    public Product updateOnlineAvailability(String id, String status) {
+        return productRepository.findById(id)
+                .map(product -> {
+                    product.setOnlineAvailability(status);
                     return productRepository.save(product);
                 })
                 .orElse(null);

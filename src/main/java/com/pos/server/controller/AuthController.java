@@ -160,4 +160,22 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+
+    @PostMapping("/onboarding")
+    public ResponseEntity<?> submitOnboarding(@RequestBody Map<String, String> data) {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Not authenticated"));
+            }
+            String username = auth.getName();
+            User user = authService.findByUsername(username);
+            
+            Map<String, Object> response = authService.submitOnboarding(user, data);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 }

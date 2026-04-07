@@ -20,6 +20,11 @@ public class OrderItem {
     private double price;
     private int qty;
 
+    @Column(name = "unit_label")
+    private String unitLabel; // e.g. '250 G', 'Half Plate'
+
+    private Double multiplier; // e.g. 0.25 (optional, 1.0 if null)
+
     @Column(name = "cart_id")
     private String cartId; // Unique ID for variant/modifier combo
 
@@ -30,8 +35,20 @@ public class OrderItem {
     @Column(name = "tax_amount")
     private Double taxAmount;
 
+    @Column(name = "cgst_amount")
+    private Double cgstAmount = 0.0;
+
+    @Column(name = "sgst_amount")
+    private Double sgstAmount = 0.0;
+
     @Column(name = "taxable_value")
     private Double taxableValue;
+
+    @Column(name = "hsn_code")
+    private String hsnCode = "9963";
+
+    @Column(name = "tax_category")
+    private String taxCategory;
 
     // Simplified modifiers storage to avoid join complexity and LOB issues
     @Column(name = "modifiers_json", columnDefinition = "TEXT")

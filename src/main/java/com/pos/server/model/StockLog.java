@@ -17,7 +17,7 @@ public class StockLog {
     @Column(nullable = false)
     private String productId;
 
-    private int qtyChange; // Positive or negative
+    private double qtyChange; // Positive or negative
 
     @Column(name = "log_type", nullable = false)
     private String type; // 'sale', 'restock', 'correction', 'return'

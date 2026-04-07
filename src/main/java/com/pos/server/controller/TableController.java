@@ -33,13 +33,13 @@ public class TableController {
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/tables")
-    public ResponseEntity<List<RestaurantTable>> getAllTables(
+    public ResponseEntity<?> getAllTables(
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
             return ResponseEntity.ok(tableService.getAllTables(rid));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage() != null ? e.getMessage() : "Unknown Error"));
         }
     }
 
@@ -62,7 +62,7 @@ public class TableController {
             RestaurantTable saved = tableService.createTable(table);
             return ResponseEntity.ok(Map.of("ok", true, "table", saved));
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
@@ -87,7 +87,7 @@ public class TableController {
                     })
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 
