@@ -345,4 +345,9 @@ public class AuthService {
         user.setDeviceToken(token);
         userRepository.save(user);
     }
+
+    @Transactional
+    public void saveUser(User user) {
+        userRepository.save(user);
+    }
 }

@@ -142,25 +142,33 @@ public class OnlineOrderController {
                     "actingUser", "aggregator"
             ));
 
-            // --- FCM PUSH NOTIFICATION (VERBOSE DIAGNOSIS) ---
+            // --- FCM PUSH NOTIFICATION (ROBUST CASE-INSENSITIVE SEARCH) ---
             try {
-                System.out.println("[DIAGNOSTIC] Webhook hit for Restaurant ID: [" + restaurantId + "]");
+                System.out.println("[DIAGNOSTIC] Webhook Restaurant ID: [" + restaurantId + "]");
                 
-                String cleanId = restaurantId.toLowerCase().trim();
-                List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(cleanId);
+                Set<com.pos.server.model.User> uniqueUsers = new HashSet<>();
                 
-                System.out.println("[DIAGNOSTIC] Found " + users.size() + " total users in database for this restaurant.");
+                // 1. Search by Raw Case
+                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.trim()));
+                
+                // 2. Search by Lowercase (Fallback)
+                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim()));
+                
+                // 3. Search by Uppercase (Fallback)
+                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.toUpperCase().trim()));
+
+                System.out.println("[DIAGNOSTIC] Found " + uniqueUsers.size() + " unique users for this store (after case-robust merge).");
                 
                 List<String> tokens = new ArrayList<>();
-                for (com.pos.server.model.User u : users) {
-                    System.out.println("[DIAGNOSTIC] Checking User: " + u.getEmail() + " | Token: " + (u.getDeviceToken() != null ? "PRESENT" : "NULL"));
+                for (com.pos.server.model.User u : uniqueUsers) {
+                    System.out.println("[DIAGNOSTIC] User: " + u.getEmail() + " | RestaurantInDB: [" + u.getRestaurantId() + "] | Token: " + (u.getDeviceToken() != null ? "PRESENT" : "NULL"));
                     if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
                         tokens.add(u.getDeviceToken());
                     }
                 }
                 
                 if (!tokens.isEmpty()) {
-                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " devices...");
+                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " tokens on channel v7_professional...");
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(
@@ -170,9 +178,8 @@ public class OnlineOrderController {
                         "diagnostic_ts", String.valueOf(System.currentTimeMillis())
                     );
                     fcmService.sendPushNotification(tokens, title, body, data);
-                    System.out.println("[DIAGNOSTIC] Push dispatch call completed.");
                 } else {
-                    System.out.println("[DIAGNOSTIC] ABORTING PUSH: No active device tokens found in DB.");
+                    System.out.println("[DIAGNOSTIC] NO TOKENS FOUND. Push aborted.");
                 }
             } catch (Exception fcmEx) {
                 System.err.println("[DIAGNOSTIC] CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
