@@ -36,30 +36,50 @@ public class OrderController {
     @GetMapping("/v2/pos-orders/test-push")
     public ResponseEntity<String> testPush(@RequestParam String restaurantId) {
         try {
-            System.out.println("[FORENSIC] Testing push for restaurantId: [" + restaurantId + "]");
+            System.out.println("[FORENSIC] [TEST-PUSH] START for RID: [" + restaurantId + "]");
             List<String> tokens = new java.util.ArrayList<>();
-            
+            List<String> matchedUsernames = new java.util.ArrayList<>();
+
+            String targetRid = (restaurantId != null) ? restaurantId.trim().toLowerCase() : "";
+            // Handle composite IDs like "divya:1" by checking the base slug "divya"
+            String baseTargetRid = targetRid.contains(":") ? targetRid.split(":")[0] : targetRid;
+
             userRepository.findAll().forEach(u -> {
-                String uRid = (u.getRestaurantId() != null) ? u.getRestaurantId().trim() : "";
-                String targetRid = (restaurantId != null) ? restaurantId.trim() : "";
+                String uRid = (u.getRestaurantId() != null) ? u.getRestaurantId().trim().toLowerCase() : "";
                 
-                if (uRid.equalsIgnoreCase(targetRid)) {
+                boolean isMatch = uRid.equals(targetRid) || uRid.equals(baseTargetRid);
+                
+                // Smart Mapping Fallback (Prefix/Suffix)
+                if (!isMatch && !targetRid.isEmpty() && !uRid.isEmpty()) {
+                    isMatch = uRid.startsWith(targetRid) || targetRid.startsWith(uRid) ||
+                              uRid.startsWith(baseTargetRid) || baseTargetRid.startsWith(uRid);
+                }
+
+                if (isMatch) {
                     if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
                         tokens.add(u.getDeviceToken());
+                        matchedUsernames.add(u.getUsername());
+                        System.out.println("[FORENSIC] [MATCH] User: " + u.getUsername() + " | RID: " + uRid + " | Token: " + u.getDeviceToken().substring(0, 10) + "...");
+                    } else {
+                        System.out.println("[FORENSIC] [SKIP] User: " + u.getUsername() + " matched RID [" + uRid + "] but has NO TOKEN!");
                     }
                 }
             });
 
             if (tokens.isEmpty()) {
-                return ResponseEntity.ok("No tokens found for [" + restaurantId + "] in Database. Try /api/v2/pos-orders/test-global to hit everyone!");
+                System.err.println("[FORENSIC] [FAIL] No tokens found for RID: " + restaurantId);
+                return ResponseEntity.ok("No tokens found for [" + restaurantId + "] in Database. Checked " + matchedUsernames.size() + " matched users.");
             }
 
+            System.out.println("[FORENSIC] [SUCCESS] Sending push to " + tokens.size() + " devices for RID: " + restaurantId);
             fcmService.sendPushNotification(tokens, "Siren Test", "Manual Siren Triggered for " + restaurantId, Map.of("type", "TEST"));
-            return ResponseEntity.ok("Push sent to " + tokens.size() + " devices!");
+            return ResponseEntity.ok("Push sent to " + tokens.size() + " devices! (Users: " + String.join(", ", matchedUsernames) + ")");
         } catch (Exception e) {
+            System.err.println("[FORENSIC] [ERROR] " + e.getMessage());
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
+
 
     @GetMapping("/v2/pos-orders/test-global")
     public ResponseEntity<String> testGlobal() {

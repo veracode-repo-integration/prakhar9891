@@ -342,9 +342,12 @@ public class AuthService {
     @Transactional
     public void updateDeviceToken(String username, String token) {
         User user = findByUsername(username);
+        String oldToken = user.getDeviceToken();
         user.setDeviceToken(token);
         userRepository.save(user);
+        System.out.println("[FORENSIC] [TOKEN-SYNC] User: " + username + " | RID: " + user.getRestaurantId() + " | Token: " + (token != null ? token.substring(0, 10) : "NULL") + "... | Previous: " + (oldToken != null ? "EXISTED" : "NONE"));
     }
+
 
     @Transactional
     public void saveUser(User user) {
