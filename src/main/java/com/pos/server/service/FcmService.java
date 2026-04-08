@@ -24,7 +24,7 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
-            System.out.println("[FCM] [FORENSIC] DISPATCHING to " + tokens.size() + " tokens on channel online_orders_v11_siren_nuclear");
+            System.out.println("[FCM] [FORENSIC] DISPATCHING to " + tokens.size() + " tokens on channel online_orders_v12_pro_siren");
             
             for (String token : tokens) {
                 try {
@@ -37,7 +37,7 @@ public class FcmService {
                             .setAndroidConfig(AndroidConfig.builder()
                                     .setPriority(AndroidConfig.Priority.HIGH)
                                     .setNotification(AndroidNotification.builder()
-                                            .setChannelId("online_orders_v11_siren_nuclear")
+                                            .setChannelId("online_orders_v12_pro_siren")
                                             .setPriority(AndroidNotification.Priority.MAX)
                                             .setSound("default")
                                             .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
