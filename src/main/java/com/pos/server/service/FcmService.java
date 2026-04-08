@@ -24,7 +24,7 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
-            System.out.println("[FCM] Executing Multicast for " + tokens.size() + " devices. Channel: online_orders_v3");
+            System.out.println("[FCM] Executing Multicast for " + tokens.size() + " devices. Channel: online_orders_v4");
 
             // Multicast support up to 500 tokens
             MulticastMessage message = MulticastMessage.builder()
@@ -37,7 +37,7 @@ public class FcmService {
                             .setPriority(AndroidConfig.Priority.HIGH)
                             .setNotification(AndroidNotification.builder()
                                     .setSound("siren") // siren.mp3 in res/raw
-                                    .setChannelId("online_orders_v3")
+                                    .setChannelId("online_orders_v4")
                                     .setPriority(AndroidNotification.Priority.MAX)
                                     .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
                                     .setVisibility(AndroidNotification.Visibility.PUBLIC)
