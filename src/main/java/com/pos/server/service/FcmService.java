@@ -24,6 +24,8 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
+            System.out.println("[FCM] Executing Multicast for " + tokens.size() + " devices. Channel: online_orders_v3");
+
             // Multicast support up to 500 tokens
             MulticastMessage message = MulticastMessage.builder()
                     .addAllTokens(tokens)
@@ -35,7 +37,7 @@ public class FcmService {
                             .setPriority(AndroidConfig.Priority.HIGH)
                             .setNotification(AndroidNotification.builder()
                                     .setSound("siren") // siren.mp3 in res/raw
-                                    .setChannelId("online_orders")
+                                    .setChannelId("online_orders_v3")
                                     .setPriority(AndroidNotification.Priority.MAX)
                                     .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
                                     .setVisibility(AndroidNotification.Visibility.PUBLIC)
@@ -52,16 +54,17 @@ public class FcmService {
                     .build();
 
             BatchResponse response = messaging.sendMulticast(message);
-            log.info("[FCM] Multicast success: {} failures: {}", response.getSuccessCount(), response.getFailureCount());
+            System.out.println("[FCM] Multicast Finished. Result: " + response.getSuccessCount() + " SUCCESS, " + response.getFailureCount() + " FAILURE.");
             
             if (response.getFailureCount() > 0) {
                 response.getResponses().forEach(res -> {
                     if (!res.isSuccessful()) {
-                        log.warn("[FCM] Token failure: {}", res.getException().getMessage());
+                        System.err.println("[FCM] Token Failure Reason: " + res.getException().getMessage());
                     }
                 });
             }
         } catch (Exception e) {
+            System.err.println("[FCM] CRITICAL SEND FAILURE: " + e.getMessage());
             log.error("[FCM] Failed to send push notification: {}", e.getMessage());
         }
     }

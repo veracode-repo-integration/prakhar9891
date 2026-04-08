@@ -144,6 +144,7 @@ public class OnlineOrderController {
 
             // --- FCM PUSH NOTIFICATION ---
             try {
+                System.out.println("[Webhook] Order received for Restaurant: " + restaurantId);
                 List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
                 List<String> tokens = new ArrayList<>();
                 for (com.pos.server.model.User u : users) {
@@ -151,6 +152,8 @@ public class OnlineOrderController {
                         tokens.add(u.getDeviceToken());
                     }
                 }
+                
+                System.out.println("[Webhook] Found " + tokens.size() + " active push tokens for this store.");
                 
                 if (!tokens.isEmpty()) {
                     String title = "New " + platform + " Order!";
