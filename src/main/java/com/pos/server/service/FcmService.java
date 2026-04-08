@@ -24,7 +24,7 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
-            System.out.println("[FCM] SENDING NUCLEAR PAYLOAD to " + tokens.size() + " devices. Channel: online_orders_v5");
+            System.out.println("[FCM] SENDING NUCLEAR PAYLOAD to " + tokens.size() + " devices. Channel: online_orders_v7_professional");
 
             // Multicast support up to 500 tokens
             MulticastMessage message = MulticastMessage.builder()
@@ -36,7 +36,7 @@ public class FcmService {
                     .setAndroidConfig(AndroidConfig.builder()
                             .setPriority(AndroidConfig.Priority.HIGH)
                             .setNotification(AndroidNotification.builder()
-                                    .setChannelId("online_orders_v6_final")
+                                    .setChannelId("online_orders_v7_professional")
                                     .setPriority(AndroidNotification.Priority.MAX)
                                     .setSound("default")
                                     .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})

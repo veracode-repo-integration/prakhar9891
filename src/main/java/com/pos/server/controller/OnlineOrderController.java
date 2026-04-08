@@ -168,7 +168,7 @@ public class OnlineOrderController {
                 }
                 
                 if (!tokens.isEmpty()) {
-                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " tokens on channel v7_professional...");
+                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " tokens on channel online_orders_v7_professional...");
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(
