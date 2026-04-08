@@ -24,28 +24,29 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
-            System.out.println("[FCM] Executing Multicast for " + tokens.size() + " devices. Channel: online_orders_v4");
+            System.out.println("[FCM] SENDING NUCLEAR PAYLOAD to " + tokens.size() + " devices. Channel: online_orders_v5");
 
             // Multicast support up to 500 tokens
             MulticastMessage message = MulticastMessage.builder()
                     .addAllTokens(tokens)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
+                    // REMOVED TOP-LEVEL NOTIFICATION to force OS to look at AndroidConfig settings
                     .setAndroidConfig(AndroidConfig.builder()
                             .setPriority(AndroidConfig.Priority.HIGH)
                             .setNotification(AndroidNotification.builder()
+                                    .setTitle(title) // MOVED INSIDE
+                                    .setBody(body)   // MOVED INSIDE
                                     .setSound("siren") // siren.mp3 in res/raw
-                                    .setChannelId("online_orders_v4")
+                                    .setChannelId("online_orders_v5")
                                     .setPriority(AndroidNotification.Priority.MAX)
                                     .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
                                     .setVisibility(AndroidNotification.Visibility.PUBLIC)
                                     .setSticky(true)
+                                    .setClickAction("OPEN_URGENT_ORDER")
                                     .build())
                             .build())
                     .setApnsConfig(ApnsConfig.builder()
                             .setAps(Aps.builder()
+                                    .setAlert(ApsAlert.builder().setTitle(title).setBody(body).build())
                                     .setSound("siren.aiff")
                                     .setCategory("ONLINE_ORDER")
                                     .build())
