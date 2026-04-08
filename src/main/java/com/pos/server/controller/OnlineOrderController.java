@@ -157,7 +157,22 @@ public class OnlineOrderController {
                 // 3. Search by Uppercase (Fallback)
                 uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.toUpperCase().trim()));
 
-                System.out.println("[DIAGNOSTIC] Found " + uniqueUsers.size() + " unique users for this store (after case-robust merge).");
+                System.out.println("[FORENSIC] Webhook Header Restaurant ID: [" + restaurantId + "]");
+                if (uniqueUsers.isEmpty()) {
+                    System.out.println("[FORENSIC] WARNING: Zero users found. No notifications will be sent.");
+                    try {
+                        List<String> allIds = userRepository.findAll().stream()
+                            .map(u -> u.getRestaurantId())
+                            .filter(id -> id != null)
+                            .distinct()
+                            .collect(java.util.stream.Collectors.toList());
+                        System.out.println("[FORENSIC] AVAILABLE STORE IDs IN DB: " + allIds);
+                    } catch (Exception e) {
+                        System.out.println("[FORENSIC] DB Trace failed: " + e.getMessage());
+                    }
+                } else {
+                    System.out.println("[FORENSIC] Found " + uniqueUsers.size() + " users to notify.");
+                }
                 
                 List<String> tokens = new ArrayList<>();
                 for (com.pos.server.model.User u : uniqueUsers) {

@@ -40,7 +40,7 @@ public class FirebaseConfig {
                         .build();
 
                 FirebaseApp.initializeApp(options, appName);
-                System.out.println("[Firebase] Initialized named app '" + appName + "' with Project ID: " + projectId);
+                System.out.println("[FORENSIC] Google Firebase App '" + appName + "' Initialized successfully.");
             }
         } catch (IOException e) {
             System.err.println("[Firebase] Failed to initialize named app: " + e.getMessage());

@@ -24,48 +24,42 @@ public class FcmService {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
             FirebaseMessaging messaging = FirebaseMessaging.getInstance(app);
 
-            System.out.println("[FCM] SENDING NUCLEAR PAYLOAD to " + tokens.size() + " devices. Channel: online_orders_v10_siren_ultimate");
-
-            // Multicast support up to 500 tokens
-            MulticastMessage message = MulticastMessage.builder()
-                    .addAllTokens(tokens)
-                    .setNotification(Notification.builder()
-                            .setTitle(title)
-                            .setBody(body)
-                            .build())
-                    .setAndroidConfig(AndroidConfig.builder()
-                            .setPriority(AndroidConfig.Priority.HIGH)
-                            .setNotification(AndroidNotification.builder()
-                                    .setChannelId("online_orders_v10_siren_ultimate")
-                                    .setPriority(AndroidNotification.Priority.MAX)
-                                    .setSound("default")
-                                    .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
-                                    .setVisibility(AndroidNotification.Visibility.PUBLIC)
-                                    .setClickAction("OPEN_URGENT_ORDER")
-                                    .build())
-                            .build())
-                    .setApnsConfig(ApnsConfig.builder()
-                            .setAps(Aps.builder()
-                                    .setAlert(ApsAlert.builder().setTitle(title).setBody(body).build())
-                                    .setSound("default")
-                                    .setCategory("ONLINE_ORDER")
-                                    .build())
-                            .build())
-                    .putAllData(data)
-                    .build();
-
-            BatchResponse response = messaging.sendMulticast(message);
-            System.out.println("[FCM] Multicast Finished. Result: " + response.getSuccessCount() + " SUCCESS, " + response.getFailureCount() + " FAILURE.");
+            System.out.println("[FCM] [FORENSIC] DISPATCHING to " + tokens.size() + " tokens on channel online_orders_v10_siren_ultimate");
             
-            if (response.getFailureCount() > 0) {
-                response.getResponses().forEach(res -> {
-                    if (!res.isSuccessful()) {
-                        System.err.println("[FCM] Token Failure Reason: " + res.getException().getMessage());
+            for (String token : tokens) {
+                try {
+                    Message message = Message.builder()
+                            .setToken(token)
+                            .setNotification(Notification.builder()
+                                    .setTitle(title)
+                                    .setBody(body)
+                                    .build())
+                            .setAndroidConfig(AndroidConfig.builder()
+                                    .setPriority(AndroidConfig.Priority.HIGH)
+                                    .setNotification(AndroidNotification.builder()
+                                            .setChannelId("online_orders_v10_siren_ultimate")
+                                            .setPriority(AndroidNotification.Priority.MAX)
+                                            .setSound("default")
+                                            .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
+                                            .setVisibility(AndroidNotification.Visibility.PUBLIC)
+                                            .setClickAction("OPEN_URGENT_ORDER")
+                                            .build())
+                                    .build())
+                            .putAllData(data)
+                            .build();
+
+                    String messageId = messaging.send(message);
+                    System.out.println("[FCM] [FORENSIC] SUCCESS for " + token.substring(0, 10) + "... ID: " + messageId);
+                } catch (Exception e) {
+                    System.err.println("[FCM] [FORENSIC] ERROR for " + token.substring(0, 10) + "... : " + e.getMessage());
+                    // Special check for common errors
+                    if (e.getMessage().contains("mismatched-sender-id")) {
+                        System.err.println("[FOMIC] SMOKING GUN: Mismatched Sender ID. Check your google-services.json vs Backend Project ID!");
                     }
-                });
+                }
             }
         } catch (Exception e) {
-            System.err.println("[FCM] CRITICAL SEND FAILURE: " + e.getMessage());
+            System.err.println("[FCM] [FORENSIC] CRITICAL FAILURE: " + e.getMessage());
             log.error("[FCM] Failed to send push notification: {}", e.getMessage());
         }
     }
