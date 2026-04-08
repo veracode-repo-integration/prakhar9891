@@ -34,19 +34,54 @@ public class OrderController {
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/v2/pos-orders/test-push")
-    public ResponseEntity<?> testPush(@RequestParam String restaurantId) {
-        System.out.println("[FORENSIC] MANUAL TEST PUSH TRIGGERED for: " + restaurantId);
-        List<String> tokens = new java.util.ArrayList<>();
-        userRepository.findAllByRestaurantId(restaurantId).forEach(u -> {
-            if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) tokens.add(u.getDeviceToken());
-        });
-        
-        if (tokens.isEmpty()) {
-            return ResponseEntity.ok("No tokens found for [" + restaurantId + "] in Database. Sync your mobile app first!");
+    public ResponseEntity<String> testPush(@RequestParam String restaurantId) {
+        try {
+            System.out.println("[FORENSIC] Testing push for restaurantId: [" + restaurantId + "]");
+            List<String> tokens = new java.util.ArrayList<>();
+            
+            userRepository.findAll().forEach(u -> {
+                String uRid = (u.getRestaurantId() != null) ? u.getRestaurantId().trim() : "";
+                String targetRid = (restaurantId != null) ? restaurantId.trim() : "";
+                
+                if (uRid.equalsIgnoreCase(targetRid)) {
+                    if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
+                        tokens.add(u.getDeviceToken());
+                    }
+                }
+            });
+
+            if (tokens.isEmpty()) {
+                return ResponseEntity.ok("No tokens found for [" + restaurantId + "] in Database. Try /api/v2/pos-orders/test-global to hit everyone!");
+            }
+
+            fcmService.sendPushNotification(tokens, "Siren Test", "Manual Siren Triggered for " + restaurantId, Map.of("type", "TEST"));
+            return ResponseEntity.ok("Push sent to " + tokens.size() + " devices!");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
-        
-        fcmService.sendPushNotification(tokens, "Siren Test", "Manual Siren Triggered!", Map.of("type", "TEST"));
-        return ResponseEntity.ok("Push sent to " + tokens.size() + " devices!");
+    }
+
+    @GetMapping("/v2/pos-orders/test-global")
+    public ResponseEntity<String> testGlobal() {
+        try {
+            System.out.println("[FORENSIC] [GLOBAL] Pushing to EVERYONE in DB!");
+            List<String> tokens = new java.util.ArrayList<>();
+            
+            userRepository.findAll().forEach(u -> {
+                if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
+                    tokens.add(u.getDeviceToken());
+                }
+            });
+
+            if (tokens.isEmpty()) {
+                return ResponseEntity.ok("Database is completely EMPTY of tokens!");
+            }
+
+            fcmService.sendPushNotification(tokens, "GLOBAL SIREN", "Testing all registered devices...", Map.of("type", "TEST"));
+            return ResponseEntity.ok("GLOBAL Push sent to " + tokens.size() + " devices!");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
     }
 
     @GetMapping("/pos-orders")
