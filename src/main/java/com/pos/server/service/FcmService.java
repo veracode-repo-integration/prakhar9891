@@ -35,21 +35,25 @@ public class FcmService {
                         messageBuilder.putAllData(data);
                     }
                     
-                    // Titan Payload: Force immediate delivery and bypass idle
-                    messageBuilder.setAndroidConfig(AndroidConfig.builder()
-                            .setTtl(0L) // Deliver NOW
-                            .setPriority(AndroidConfig.Priority.HIGH)
-                            .setNotification(AndroidNotification.builder()
+                    // Dual-Force: Send both top-level and Android-specific notifications
+                    messageBuilder.setNotification(Notification.builder()
                                     .setTitle(title)
                                     .setBody(body)
-                                    .setChannelId("online_orders_v13_nuclear_final")
-                                    .setPriority(AndroidNotification.Priority.MAX)
-                                    .setSound("default")
-                                    .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
-                                    .setVisibility(AndroidNotification.Visibility.PUBLIC)
-                                    .setClickAction("OPEN_URGENT_ORDER")
                                     .build())
-                            .build());
+                            .setAndroidConfig(AndroidConfig.builder()
+                                    .setTtl(0L) // Immediate delivery
+                                    .setPriority(AndroidConfig.Priority.HIGH)
+                                    .setNotification(AndroidNotification.builder()
+                                            .setTitle(title)
+                                            .setBody(body)
+                                            .setChannelId("online_orders_v13_nuclear_final")
+                                            .setPriority(AndroidNotification.Priority.MAX)
+                                            .setSound("default")
+                                            .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
+                                            .setVisibility(AndroidNotification.Visibility.PUBLIC)
+                                            .setClickAction("OPEN_URGENT_ORDER")
+                                            .build())
+                                    .build());
 
                     Message message = messageBuilder.build();
                     String messageId = messaging.send(message);
