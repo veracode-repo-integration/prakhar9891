@@ -142,31 +142,41 @@ public class OnlineOrderController {
                     "actingUser", "aggregator"
             ));
 
-            // --- FCM PUSH NOTIFICATION ---
+            // --- FCM PUSH NOTIFICATION (VERBOSE DIAGNOSIS) ---
             try {
-                System.out.println("[Webhook] Order received for Restaurant: " + restaurantId);
-                List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
+                System.out.println("[DIAGNOSTIC] Webhook hit for Restaurant ID: [" + restaurantId + "]");
+                
+                String cleanId = restaurantId.toLowerCase().trim();
+                List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(cleanId);
+                
+                System.out.println("[DIAGNOSTIC] Found " + users.size() + " total users in database for this restaurant.");
+                
                 List<String> tokens = new ArrayList<>();
                 for (com.pos.server.model.User u : users) {
+                    System.out.println("[DIAGNOSTIC] Checking User: " + u.getEmail() + " | Token: " + (u.getDeviceToken() != null ? "PRESENT" : "NULL"));
                     if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
                         tokens.add(u.getDeviceToken());
                     }
                 }
                 
-                System.out.println("[Webhook] Found " + tokens.size() + " active push tokens for this store.");
-                
                 if (!tokens.isEmpty()) {
+                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " devices...");
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(
                         "type", "NEW_ONLINE_ORDER",
                         "orderId", saved.getId(),
-                        "restaurantId", restaurantId
+                        "restaurantId", restaurantId,
+                        "diagnostic_ts", String.valueOf(System.currentTimeMillis())
                     );
                     fcmService.sendPushNotification(tokens, title, body, data);
+                    System.out.println("[DIAGNOSTIC] Push dispatch call completed.");
+                } else {
+                    System.out.println("[DIAGNOSTIC] ABORTING PUSH: No active device tokens found in DB.");
                 }
             } catch (Exception fcmEx) {
-                System.err.println("[FCM] Silent failure during order webhook: " + fcmEx.getMessage());
+                System.err.println("[DIAGNOSTIC] CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
+                fcmEx.printStackTrace();
             }
 
             return ResponseEntity.ok(Map.of("status", "success", "pos_order_id", saved.getId()));
