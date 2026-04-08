@@ -43,7 +43,13 @@ public class OnlineOrderController {
     @PostMapping("/orders")
     public ResponseEntity<?> receiveOnlineOrder(
             @RequestBody Map<String, Object> payload,
-            @RequestHeader(value = "X-Restaurant-Id", required = true) String restaurantId) {
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        
+        System.out.println("[FORENSIC] Webhook Received. Payload Present: " + (payload != null));
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            System.err.println("[FORENSIC] REJECTED: Webhook arrived but 'X-Restaurant-Id' header is MISSING!");
+            return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
+        }
         
         try {
             // 1. Extract Basic Info
@@ -230,5 +236,21 @@ public class OnlineOrderController {
             } catch (Exception e) { }
         }
         return null;
+    }
+
+    @GetMapping("/test-push")
+    public ResponseEntity<?> testPush(@RequestParam String restaurantId) {
+        System.out.println("[FORENSIC] MANUAL TEST PUSH TRIGGERED for: " + restaurantId);
+        List<String> tokens = new ArrayList<>();
+        userRepository.findAllByRestaurantId(restaurantId).forEach(u -> {
+            if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) tokens.add(u.getDeviceToken());
+        });
+        
+        if (tokens.isEmpty()) {
+            return ResponseEntity.ok("No tokens found for [" + restaurantId + "] in Database. Sync your mobile app first!");
+        }
+        
+        fcmService.sendPushNotification(tokens, "Siren Test", "Manual Siren Triggered!", Map.of("type", "TEST"));
+        return ResponseEntity.ok("Push sent to " + tokens.size() + " devices!");
     }
 }
