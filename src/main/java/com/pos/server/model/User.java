@@ -22,4 +22,7 @@ public class User {
 
     @Column(name = "restaurant_id")
     private String restaurantId;
+
+    @Column(name = "device_token")
+    private String deviceToken;
 }

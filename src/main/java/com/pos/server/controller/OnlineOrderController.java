@@ -26,6 +26,12 @@ public class OnlineOrderController {
     private ProductService productService;
 
     @Autowired
+    private com.pos.server.service.FcmService fcmService;
+
+    @Autowired
+    private com.pos.server.repository.UserRepository userRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
@@ -135,6 +141,30 @@ public class OnlineOrderController {
                     "type", "NEW_ONLINE_ORDER",
                     "actingUser", "aggregator"
             ));
+
+            // --- FCM PUSH NOTIFICATION ---
+            try {
+                List<com.pos.server.model.User> users = userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim());
+                List<String> tokens = new ArrayList<>();
+                for (com.pos.server.model.User u : users) {
+                    if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
+                        tokens.add(u.getDeviceToken());
+                    }
+                }
+                
+                if (!tokens.isEmpty()) {
+                    String title = "New " + platform + " Order!";
+                    String body = "Order #" + externalId + " for ₹" + saved.getTotal();
+                    Map<String, String> data = Map.of(
+                        "type", "NEW_ONLINE_ORDER",
+                        "orderId", saved.getId(),
+                        "restaurantId", restaurantId
+                    );
+                    fcmService.sendPushNotification(tokens, title, body, data);
+                }
+            } catch (Exception fcmEx) {
+                System.err.println("[FCM] Silent failure during order webhook: " + fcmEx.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of("status", "success", "pos_order_id", saved.getId()));
 

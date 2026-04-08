@@ -178,4 +178,28 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+
+    @PostMapping("/update-device-token")
+    public ResponseEntity<?> updateDeviceToken(@RequestBody Map<String, String> request) {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                System.err.println("[Auth] Token update FAILED: Not authenticated");
+                return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Not authenticated"));
+            }
+            String username = auth.getName();
+            String token = request.get("token");
+            if (token != null) {
+                System.out.println("[Auth] REGISTERING DEVICE TOKEN for " + username + ": " + token);
+                authService.updateDeviceToken(username, token);
+                return ResponseEntity.ok(Map.of("ok", true, "message", "Token updated"));
+            }
+            System.err.println("[Auth] Token update FAILED: Token missing in request for " + username);
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Token missing"));
+        } catch (Exception e) {
+            System.err.println("[Auth] Token update ERROR: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 }

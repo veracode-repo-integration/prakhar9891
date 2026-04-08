@@ -338,4 +338,11 @@ public class AuthService {
         response.put("user", user);
         return response;
     }
+
+    @Transactional
+    public void updateDeviceToken(String username, String token) {
+        User user = findByUsername(username);
+        user.setDeviceToken(token);
+        userRepository.save(user);
+    }
 }

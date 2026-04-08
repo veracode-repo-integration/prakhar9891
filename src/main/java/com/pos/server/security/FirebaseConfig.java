@@ -23,8 +23,19 @@ public class FirebaseConfig {
                     .anyMatch(app -> app.getName().equals(appName));
 
             if (!appExists) {
+                GoogleCredentials credentials;
+                java.io.File file = new java.io.File("service-account.json");
+                
+                if (file.exists()) {
+                    System.out.println("[Firebase] Found service-account.json in root. Loading credentials...");
+                    credentials = GoogleCredentials.fromStream(new java.io.FileInputStream(file));
+                } else {
+                    System.out.println("[Firebase] service-account.json not found in root. Using Application Default.");
+                    credentials = GoogleCredentials.getApplicationDefault();
+                }
+
                 FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.getApplicationDefault())
+                        .setCredentials(credentials)
                         .setProjectId(projectId)
                         .build();
 
