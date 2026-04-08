@@ -1,6 +1,8 @@
 package com.pos.server.service;
 
 import com.google.firebase.messaging.*;
+import com.google.firebase.messaging.AndroidNotification.Color;
+import com.google.firebase.messaging.AndroidNotification.LightSettings;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +39,6 @@ public class FcmService {
                                     .setSound("siren") // siren.mp3 in res/raw
                                     .setChannelId("online_orders")
                                     .setPriority(AndroidNotification.Priority.MAX)
-                                    .setNotificationPriority(AndroidNotification.Priority.MAX)
                                     .setLightSettings(LightSettings.builder()
                                             .setColor(Color.builder().setRed(1f).setGreen(0f).setBlue(0f).setAlpha(1f).build())
                                             .setLightOnDurationMillis(500)
