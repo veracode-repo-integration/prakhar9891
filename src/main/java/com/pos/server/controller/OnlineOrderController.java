@@ -24,6 +24,9 @@ public class OnlineOrderController {
 
     @Autowired
     private ProductService productService;
+    
+    @Autowired
+    private AuthService authService;
 
     @Autowired
     private com.pos.server.service.FcmService fcmService;

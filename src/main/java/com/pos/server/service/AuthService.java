@@ -377,4 +377,8 @@ public class AuthService {
         return tokens;
     }
 
+    @Transactional
+    public void saveUser(User user) {
+        userRepository.save(user);
+    }
 }
