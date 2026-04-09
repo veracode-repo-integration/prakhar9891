@@ -148,48 +148,12 @@ public class OnlineOrderController {
                     "actingUser", "aggregator"
             ));
 
-            // --- FCM PUSH NOTIFICATION (ROBUST CASE-INSENSITIVE SEARCH) ---
+            // --- UNIFIED ELITE NOTIFICATION DISPATCH ---
             try {
-                System.out.println("[DIAGNOSTIC] Webhook Restaurant ID: [" + restaurantId + "]");
-                
-                Set<com.pos.server.model.User> uniqueUsers = new HashSet<>();
-                
-                // 1. Search by Raw Case
-                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.trim()));
-                
-                // 2. Search by Lowercase (Fallback)
-                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.toLowerCase().trim()));
-                
-                // 3. Search by Uppercase (Fallback)
-                uniqueUsers.addAll(userRepository.findAllByRestaurantId(restaurantId.toUpperCase().trim()));
-
-                System.out.println("[FORENSIC] Webhook Header Restaurant ID: [" + restaurantId + "]");
-                if (uniqueUsers.isEmpty()) {
-                    System.out.println("[FORENSIC] WARNING: Zero users found. No notifications will be sent.");
-                    try {
-                        List<String> allIds = userRepository.findAll().stream()
-                            .map(u -> u.getRestaurantId())
-                            .filter(id -> id != null)
-                            .distinct()
-                            .collect(java.util.stream.Collectors.toList());
-                        System.out.println("[FORENSIC] AVAILABLE STORE IDs IN DB: " + allIds);
-                    } catch (Exception e) {
-                        System.out.println("[FORENSIC] DB Trace failed: " + e.getMessage());
-                    }
-                } else {
-                    System.out.println("[FORENSIC] Found " + uniqueUsers.size() + " users to notify.");
-                }
-                
-                List<String> tokens = new ArrayList<>();
-                for (com.pos.server.model.User u : uniqueUsers) {
-                    System.out.println("[DIAGNOSTIC] User: " + u.getEmail() + " | RestaurantInDB: [" + u.getRestaurantId() + "] | Token: " + (u.getDeviceToken() != null ? "PRESENT" : "NULL"));
-                    if (u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
-                        tokens.add(u.getDeviceToken());
-                    }
-                }
+                System.out.println("[FORENSIC] Webhook DISPATCH for RID: " + restaurantId);
+                List<String> tokens = authService.findTokensByRestaurantIdSmart(restaurantId);
                 
                 if (!tokens.isEmpty()) {
-                    System.out.println("[DIAGNOSTIC] DISPATCHING Push to " + tokens.size() + " tokens on channel online_orders_v10_siren_ultimate...");
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(
@@ -198,14 +162,15 @@ public class OnlineOrderController {
                         "restaurantId", restaurantId,
                         "diagnostic_ts", String.valueOf(System.currentTimeMillis())
                     );
-                    fcmService.sendPushNotification(tokens, title, body, data);
+                    fcmService.dispatchHighPrioritySiren(tokens, title, body, data);
+                    System.out.println("[FORENSIC] Webhook Push sent to " + tokens.size() + " devices.");
                 } else {
-                    System.out.println("[DIAGNOSTIC] NO TOKENS FOUND. Push aborted.");
+                    System.out.println("[FORENSIC] Webhook WARNING: No tokens found for RID: " + restaurantId);
                 }
             } catch (Exception fcmEx) {
-                System.err.println("[DIAGNOSTIC] CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
-                fcmEx.printStackTrace();
+                System.err.println("[FORENSIC] Webhook CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
             }
+
 
             return ResponseEntity.ok(Map.of("status", "success", "pos_order_id", saved.getId()));
 

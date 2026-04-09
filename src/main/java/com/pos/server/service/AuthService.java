@@ -349,8 +349,31 @@ public class AuthService {
     }
 
 
-    @Transactional
-    public void saveUser(User user) {
-        userRepository.save(user);
+    public List<String> findTokensByRestaurantIdSmart(String restaurantId) {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) return new java.util.ArrayList<>();
+        
+        String targetRid = restaurantId.trim().toLowerCase();
+        String baseTargetRid = targetRid.contains(":") ? targetRid.split(":")[0] : targetRid;
+        
+        List<String> tokens = new java.util.ArrayList<>();
+        List<User> allUsers = userRepository.findAll();
+        
+        for (User u : allUsers) {
+            String uRid = (u.getRestaurantId() != null) ? u.getRestaurantId().trim().toLowerCase() : "";
+            
+            boolean isMatch = uRid.equals(targetRid) || uRid.equals(baseTargetRid);
+            
+            // Smart Mapping Fallback (Prefix/Suffix)
+            if (!isMatch && !targetRid.isEmpty() && !uRid.isEmpty()) {
+                isMatch = uRid.startsWith(targetRid) || targetRid.startsWith(uRid) ||
+                          uRid.startsWith(baseTargetRid) || baseTargetRid.startsWith(uRid);
+            }
+
+            if (isMatch && u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
+                tokens.add(u.getDeviceToken());
+            }
+        }
+        return tokens;
     }
+
 }
