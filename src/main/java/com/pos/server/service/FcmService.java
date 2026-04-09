@@ -46,14 +46,15 @@ public class FcmService {
                                     .setNotification(AndroidNotification.builder()
                                             .setTitle(title)
                                             .setBody(body)
-                                            .setChannelId("online_orders_v13_nuclear_final")
+                                            .setChannelId("online_orders_v15_siren_nuclear")
                                             .setPriority(AndroidNotification.Priority.MAX)
-                                            .setSound("default")
+                                            .setSound("siren")
                                             .setVibrateTimingsInMillis(new long[]{0, 500, 250, 500})
                                             .setVisibility(AndroidNotification.Visibility.PUBLIC)
                                             .setClickAction("OPEN_URGENT_ORDER")
                                             .build())
                                     .build());
+
 
                     Message message = messageBuilder.build();
                     String messageId = messaging.send(message);
