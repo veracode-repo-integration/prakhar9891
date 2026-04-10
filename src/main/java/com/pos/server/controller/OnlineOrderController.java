@@ -38,6 +38,9 @@ public class OnlineOrderController {
     private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
+    private com.pos.server.service.SirenSchedulerService sirenSchedulerService;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     /**
@@ -169,6 +172,9 @@ public class OnlineOrderController {
                     );
                     fcmService.dispatchHighPrioritySiren(tokens, title, body, data);
                     System.out.println("[FORENSIC] Webhook Push sent to " + tokens.size() + " devices.");
+                    
+                    // --- TRIGGER THE ATOMIC HAMMER ---
+                    sirenSchedulerService.startSiren(saved);
                 } else {
                     System.out.println("[FORENSIC] Webhook WARNING: No tokens found for RID: " + restaurantId);
                 }

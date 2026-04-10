@@ -44,6 +44,9 @@ public class OrderService {
     @Autowired
     private CommonDataService commonDataService;
 
+    @Autowired
+    private com.pos.server.service.SirenSchedulerService sirenSchedulerService;
+
     private final ObjectMapper mapper = new ObjectMapper();
 
     public List<Order> getAllOrders(String restaurantId) {
@@ -408,7 +411,17 @@ public class OrderService {
                 }
             }
 
-            return orderRepository.save(order);
+            Order saved = orderRepository.save(order);
+            
+            // --- STOP THE ATOMIC HAMMER ---
+            // If the status is no longer pending, stop the siren pulses
+            String newStatus = saved.getStatus() != null ? saved.getStatus().toLowerCase() : "";
+            String newKStatus = saved.getKitchenStatus() != null ? saved.getKitchenStatus().toLowerCase() : "";
+            if (!newStatus.equals("pending") || !newKStatus.equals("pending")) {
+                sirenSchedulerService.stopSiren(id, "Status update detected: " + newStatus);
+            }
+
+            return saved;
         }
         return null;
     }
