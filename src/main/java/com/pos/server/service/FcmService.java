@@ -30,14 +30,16 @@ public class FcmService {
                                     .setBody(body)
                                     .build())
                             .setAndroidConfig(AndroidConfig.builder()
-                                    .setTtl(0L)
+                                    .setTtl(0L) // Instant delivery or expire
                                     .setPriority(AndroidConfig.Priority.HIGH)
+                                    .setDirectBootOk(true) // Crucial for locked devices
                                     .setNotification(AndroidNotification.builder()
                                             .setTitle(title)
                                             .setBody(body)
                                             .setChannelId("online_orders_v16_nuclear_siren")
                                             .setPriority(AndroidNotification.Priority.MAX)
                                             .setSound("siren")
+                                            .setDefaultSound(false)
                                             .setVisibility(AndroidNotification.Visibility.PUBLIC)
                                             .setClickAction("OPEN_URGENT_ORDER")
                                             .build())
