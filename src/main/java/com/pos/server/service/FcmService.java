@@ -48,7 +48,8 @@ public class FcmService {
                             .build();
 
                     String responseId = messaging.send(message);
-                    System.out.println("[FCM] [ELITE-SUCCESS] Message sent successfully. ID: " + responseId);
+                    System.out.println("[FCM] [ELITE-SUCCESS] Message sent to Google. ID: " + responseId);
+                    System.out.println("[FCM] [ELITE-PAYLOAD] Target Channel: " + CHANNEL_ID + " | Title: " + title);
                 } catch (Exception e) {
                     System.err.println("[FCM] [ELITE-ERR] Token: " + (token != null && token.length() > 5 ? token.substring(0, 5) : "INVALID") + "... : " + e.getMessage());
                 }

@@ -48,9 +48,10 @@ public class OnlineOrderController {
             @RequestBody Map<String, Object> payload,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         
-        System.out.println("[FORENSIC] Webhook Received. Payload Present: " + (payload != null));
+        System.out.println("[FORENSIC] [WEBHOOK-HIT] RID_HEADER: " + restaurantId + " | PAYLOAD: " + (payload != null ? "YES" : "NO"));
+        
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
-            System.err.println("[FORENSIC] REJECTED: Webhook arrived but 'X-Restaurant-Id' header is MISSING!");
+            System.err.println("[FORENSIC] [WEBHOOK-ERR] REJECTED: X-Restaurant-Id header is MISSING!");
             return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
         }
         
