@@ -40,7 +40,6 @@ public class FcmService {
                                             .setPriority(AndroidNotification.Priority.MAX)
                                             .setSound("siren")
                                             .setDefaultSound(false)
-                                            .setNotificationPriority(AndroidNotification.Priority.MAX)
                                             .setNotificationCount(1)
                                             .setVisibility(AndroidNotification.Visibility.PUBLIC)
                                             .setClickAction("OPEN_URGENT_ORDER")
