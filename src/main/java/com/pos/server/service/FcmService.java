@@ -14,7 +14,7 @@ public class FcmService {
     public void dispatchHighPrioritySiren(List<String> tokens, String title, String body, Map<String, String> data) {
         if (tokens == null || tokens.isEmpty()) return;
         
-        System.out.println("[FCM] [ELITE-SIREN] Dispatching to " + tokens.size() + " tokens on Channel v16 (NUCLEAR)");
+        System.out.println("[FCM] [ELITE-SIREN] Dispatching to " + tokens.size() + " tokens on Channel v17 (NUCLEAR)");
         
         try {
             com.google.firebase.FirebaseApp app = com.google.firebase.FirebaseApp.getInstance("PosFirebaseApp");
@@ -36,10 +36,12 @@ public class FcmService {
                                     .setNotification(AndroidNotification.builder()
                                             .setTitle(title)
                                             .setBody(body)
-                                            .setChannelId("online_orders_v16_nuclear_siren")
+                                            .setChannelId("online_orders_v17_nuclear")
                                             .setPriority(AndroidNotification.Priority.MAX)
                                             .setSound("siren")
                                             .setDefaultSound(false)
+                                            .setNotificationPriority(AndroidNotification.Priority.MAX)
+                                            .setNotificationCount(1)
                                             .setVisibility(AndroidNotification.Visibility.PUBLIC)
                                             .setClickAction("OPEN_URGENT_ORDER")
                                             .build())
