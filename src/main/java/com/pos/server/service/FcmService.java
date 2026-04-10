@@ -49,7 +49,7 @@ public class FcmService {
 
                     String responseId = messaging.send(message);
                     System.out.println("[FCM] [ELITE-SUCCESS] Message sent to Google. ID: " + responseId);
-                    System.out.println("[FCM] [ELITE-PAYLOAD] Target Channel: " + CHANNEL_ID + " | Title: " + title);
+                    System.out.println("[FCM] [ELITE-PAYLOAD] Target Channel: online_orders_v17_nuclear | Title: " + title);
                 } catch (Exception e) {
                     System.err.println("[FCM] [ELITE-ERR] Token: " + (token != null && token.length() > 5 ? token.substring(0, 5) : "INVALID") + "... : " + e.getMessage());
                 }
