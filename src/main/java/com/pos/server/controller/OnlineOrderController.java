@@ -157,6 +157,7 @@ public class OnlineOrderController {
                 List<String> tokens = authService.findTokensByRestaurantIdSmart(restaurantId);
                 
                 if (!tokens.isEmpty()) {
+                    System.out.println("[FORENSIC] Webhook DISPATCH to " + tokens.size() + " tokens: " + tokens);
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(

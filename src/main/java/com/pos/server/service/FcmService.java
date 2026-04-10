@@ -47,9 +47,10 @@ public class FcmService {
                                     .build())
                             .build();
 
-                    messaging.send(message);
+                    String responseId = messaging.send(message);
+                    System.out.println("[FCM] [ELITE-SUCCESS] Message sent successfully. ID: " + responseId);
                 } catch (Exception e) {
-                    System.err.println("[FCM] [ELITE-ERR] Token: " + token.substring(0, 5) + "... : " + e.getMessage());
+                    System.err.println("[FCM] [ELITE-ERR] Token: " + (token != null && token.length() > 5 ? token.substring(0, 5) : "INVALID") + "... : " + e.getMessage());
                 }
             }
         } catch (Exception e) {
