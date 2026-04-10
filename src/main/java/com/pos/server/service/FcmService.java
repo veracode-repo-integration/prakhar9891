@@ -35,7 +35,7 @@ public class FcmService {
                                     .setNotification(AndroidNotification.builder()
                                             .setTitle(title)
                                             .setBody(body)
-                                            .setChannelId("online_orders_v15_siren_nuclear")
+                                            .setChannelId("online_orders_v16_nuclear_siren")
                                             .setPriority(AndroidNotification.Priority.MAX)
                                             .setSound("siren")
                                             .setVisibility(AndroidNotification.Visibility.PUBLIC)
