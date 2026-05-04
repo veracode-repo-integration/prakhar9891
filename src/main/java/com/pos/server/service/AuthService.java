@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -337,5 +338,47 @@ public class AuthService {
         response.put("ok", true);
         response.put("user", user);
         return response;
+    }
+
+    @Transactional
+    public void updateDeviceToken(String username, String token) {
+        User user = findByUsername(username);
+        String oldToken = user.getDeviceToken();
+        user.setDeviceToken(token);
+        userRepository.save(user);
+        System.out.println("[FORENSIC] [TOKEN-SYNC] User: " + username + " | RID: " + user.getRestaurantId() + " | Token: " + (token != null ? token.substring(0, 10) : "NULL") + "... | Previous: " + (oldToken != null ? "EXISTED" : "NONE"));
+    }
+
+
+    public List<String> findTokensByRestaurantIdSmart(String restaurantId) {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) return new java.util.ArrayList<>();
+        
+        String targetRid = restaurantId.trim().toLowerCase();
+        String baseTargetRid = targetRid.contains(":") ? targetRid.split(":")[0] : targetRid;
+        
+        List<String> tokens = new java.util.ArrayList<>();
+        List<User> allUsers = userRepository.findAll();
+        
+        for (User u : allUsers) {
+            String uRid = (u.getRestaurantId() != null) ? u.getRestaurantId().trim().toLowerCase() : "";
+            
+            boolean isMatch = uRid.equals(targetRid) || uRid.equals(baseTargetRid);
+            
+            // Smart Mapping Fallback (Prefix/Suffix)
+            if (!isMatch && !targetRid.isEmpty() && !uRid.isEmpty()) {
+                isMatch = uRid.startsWith(targetRid) || targetRid.startsWith(uRid) ||
+                          uRid.startsWith(baseTargetRid) || baseTargetRid.startsWith(uRid);
+            }
+
+            if (isMatch && u.getDeviceToken() != null && !u.getDeviceToken().isEmpty()) {
+                tokens.add(u.getDeviceToken());
+            }
+        }
+        return tokens;
+    }
+
+    @Transactional
+    public void saveUser(User user) {
+        userRepository.save(user);
     }
 }

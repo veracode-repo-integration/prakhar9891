@@ -24,9 +24,21 @@ public class OnlineOrderController {
 
     @Autowired
     private ProductService productService;
+    
+    @Autowired
+    private AuthService authService;
+
+    @Autowired
+    private com.pos.server.service.FcmService fcmService;
+
+    @Autowired
+    private com.pos.server.repository.UserRepository userRepository;
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private com.pos.server.service.SirenSchedulerService sirenSchedulerService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -37,7 +49,14 @@ public class OnlineOrderController {
     @PostMapping("/orders")
     public ResponseEntity<?> receiveOnlineOrder(
             @RequestBody Map<String, Object> payload,
-            @RequestHeader(value = "X-Restaurant-Id", required = true) String restaurantId) {
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        
+        System.out.println("[FORENSIC] [WEBHOOK-HIT] RID_HEADER: " + restaurantId + " | PAYLOAD: " + (payload != null ? "YES" : "NO"));
+        
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            System.err.println("[FORENSIC] [WEBHOOK-ERR] REJECTED: X-Restaurant-Id header is MISSING!");
+            return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
+        }
         
         try {
             // 1. Extract Basic Info
@@ -136,6 +155,34 @@ public class OnlineOrderController {
                     "actingUser", "aggregator"
             ));
 
+            // --- UNIFIED ELITE NOTIFICATION DISPATCH ---
+            try {
+                System.out.println("[FORENSIC] Webhook DISPATCH for RID: " + restaurantId);
+                List<String> tokens = authService.findTokensByRestaurantIdSmart(restaurantId);
+                
+                if (!tokens.isEmpty()) {
+                    System.out.println("[FORENSIC] Webhook DISPATCH to " + tokens.size() + " tokens: " + tokens);
+                    String title = "New " + platform + " Order!";
+                    String body = "Order #" + externalId + " for ₹" + saved.getTotal();
+                    Map<String, String> data = Map.of(
+                        "type", "NEW_ONLINE_ORDER",
+                        "orderId", saved.getId(),
+                        "restaurantId", restaurantId,
+                        "diagnostic_ts", String.valueOf(System.currentTimeMillis())
+                    );
+                    fcmService.dispatchHighPrioritySiren(tokens, title, body, data);
+                    System.out.println("[FORENSIC] Webhook Push sent to " + tokens.size() + " devices.");
+                    
+                    // --- TRIGGER THE ATOMIC HAMMER ---
+                    sirenSchedulerService.startSiren(saved);
+                } else {
+                    System.out.println("[FORENSIC] Webhook WARNING: No tokens found for RID: " + restaurantId);
+                }
+            } catch (Exception fcmEx) {
+                System.err.println("[FORENSIC] Webhook CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
+            }
+
+
             return ResponseEntity.ok(Map.of("status", "success", "pos_order_id", saved.getId()));
 
         } catch (Exception e) {
@@ -166,4 +213,5 @@ public class OnlineOrderController {
         }
         return null;
     }
+
 }

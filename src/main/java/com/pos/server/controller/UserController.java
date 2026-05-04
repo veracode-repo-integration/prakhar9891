@@ -41,7 +41,8 @@ public class UserController {
                         u.getEmail(),
                         u.getContact(),
                         u.getRole(),
-                        u.getRestaurantId()))
+                        u.getRestaurantId(),
+                        "OPEN"))
                 .collect(Collectors.toList()));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("message", e.getMessage()));

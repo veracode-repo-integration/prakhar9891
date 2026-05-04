@@ -12,7 +12,7 @@ import java.io.IOException;
 @Configuration
 public class FirebaseConfig {
     
-    @Value("${firebase.project-id:udhyog-khaata}")
+    @Value("${firebase.project-id:udhyog-khaata-pos}")
     private String projectId;
 
     @PostConstruct
@@ -23,13 +23,24 @@ public class FirebaseConfig {
                     .anyMatch(app -> app.getName().equals(appName));
 
             if (!appExists) {
+                GoogleCredentials credentials;
+                java.io.File file = new java.io.File("service-account.json");
+                
+                if (file.exists()) {
+                    System.out.println("[Firebase] Found service-account.json in root. Loading credentials...");
+                    credentials = GoogleCredentials.fromStream(new java.io.FileInputStream(file));
+                } else {
+                    System.out.println("[Firebase] service-account.json not found in root. Using Application Default.");
+                    credentials = GoogleCredentials.getApplicationDefault();
+                }
+
                 FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.getApplicationDefault())
+                        .setCredentials(credentials)
                         .setProjectId(projectId)
                         .build();
 
                 FirebaseApp.initializeApp(options, appName);
-                System.out.println("[Firebase] Initialized named app '" + appName + "' with Project ID: " + projectId);
+                System.out.println("[FORENSIC] Google Firebase App '" + appName + "' Initialized successfully.");
             }
         } catch (IOException e) {
             System.err.println("[Firebase] Failed to initialize named app: " + e.getMessage());

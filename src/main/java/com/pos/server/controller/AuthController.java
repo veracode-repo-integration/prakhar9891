@@ -46,12 +46,15 @@ public class AuthController {
 
     private com.pos.server.dto.UserResponse createUserResponse(User user) {
         java.util.List<String> allowedFeatures = new java.util.ArrayList<>();
+        String onlineStatus = "OPEN";
         if (user.getRestaurantId() != null) {
-            restaurantRepository.findById(user.getRestaurantId()).ifPresent(r -> {
+            com.pos.server.model.Restaurant r = restaurantRepository.findById(user.getRestaurantId()).orElse(null);
+            if (r != null) {
                 if (r.getAllowedFeatures() != null) {
                     allowedFeatures.addAll(r.getAllowedFeatures());
                 }
-            });
+                onlineStatus = r.getOnlineStatus() != null ? r.getOnlineStatus() : "OPEN";
+            }
         }
         return new com.pos.server.dto.UserResponse(
                 user.getDbId(),
@@ -61,6 +64,7 @@ public class AuthController {
                 user.getContact(),
                 user.getRole(),
                 user.getRestaurantId(),
+                onlineStatus,
                 allowedFeatures);
     }
 
@@ -176,6 +180,63 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, Object> updates) {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+            }
+            String username = auth.getName();
+            User user = authService.findByUsername(username);
+
+            // Handle onlineStatus (Restaurant Level)
+            if (updates.containsKey("onlineStatus") && user.getRestaurantId() != null) {
+                String newStatus = (String) updates.get("onlineStatus");
+                restaurantRepository.findById(user.getRestaurantId()).ifPresent(r -> {
+                    r.setOnlineStatus(newStatus);
+                    restaurantRepository.save(r);
+                    System.out.println("[Auth] Updated OnlineStatus for " + r.getId() + " to " + newStatus);
+                });
+            }
+
+            // Handle other field updates (User Level)
+            if (updates.containsKey("firstName")) user.setFirstName((String) updates.get("firstName"));
+            if (updates.containsKey("lastName")) user.setLastName((String) updates.get("lastName"));
+            if (updates.containsKey("email")) user.setEmail((String) updates.get("email"));
+            
+            authService.saveUser(user);
+            return ResponseEntity.ok(Map.of("ok", true, "user", createUserResponse(user)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/update-device-token")
+    public ResponseEntity<?> updateDeviceToken(@RequestBody Map<String, String> request) {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+                System.err.println("[Auth] Token update FAILED: Not authenticated");
+                return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Not authenticated"));
+            }
+            String username = auth.getName();
+            String token = request.get("token");
+            if (token != null) {
+                System.out.println("[Auth] REGISTERING DEVICE TOKEN for " + username + ": " + token);
+                authService.updateDeviceToken(username, token);
+                return ResponseEntity.ok(Map.of("ok", true, "message", "Token updated"));
+            }
+            System.err.println("[Auth] Token update FAILED: Token missing in request for " + username);
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Token missing"));
+        } catch (Exception e) {
+            System.err.println("[Auth] Token update ERROR: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }

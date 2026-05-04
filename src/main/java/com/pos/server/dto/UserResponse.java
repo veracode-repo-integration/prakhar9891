@@ -11,12 +11,13 @@ public class UserResponse {
     private String contact;
     private String role;
     private String restaurantId;
+    private String onlineStatus;
     private java.util.List<String> allowedFeatures;
 
     // NO passwordHash field here. IMPOSSIBLE to leak.
 
     public UserResponse(Long id, String username, String name, String email, String contact, String role,
-            String restaurantId, java.util.List<String> allowedFeatures) {
+            String restaurantId, String onlineStatus, java.util.List<String> allowedFeatures) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -24,11 +25,12 @@ public class UserResponse {
         this.contact = contact;
         this.role = role;
         this.restaurantId = restaurantId;
+        this.onlineStatus = onlineStatus;
         this.allowedFeatures = allowedFeatures;
     }
 
     public UserResponse(Long id, String username, String name, String email, String contact, String role,
-            String restaurantId) {
-        this(id, username, name, email, contact, role, restaurantId, new java.util.ArrayList<>());
+            String restaurantId, String onlineStatus) {
+        this(id, username, name, email, contact, role, restaurantId, onlineStatus, new java.util.ArrayList<>());
     }
 }
