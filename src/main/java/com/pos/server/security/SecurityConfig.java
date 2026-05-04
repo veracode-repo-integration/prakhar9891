@@ -42,6 +42,7 @@ public class SecurityConfig {
                         "/api/dine-in/scan",
                         "/api/webhooks/**",
                         "/api/v2/pos-orders/**",
+                        "/api/razorpay/**",
                         "/ws-pos/**")
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
