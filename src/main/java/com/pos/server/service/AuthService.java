@@ -139,6 +139,11 @@ public class AuthService {
             if ("super-admin-bypass".equals(idToken)) {
                 phone = "+919891260801";
                 System.out.println("[AuthService] Super Admin Bypass used for: " + phone);
+            } else if ("guest-otp-bypass".equals(idToken)) {
+                // SPECIAL BYPASS FOR DINE-IN (UPI-FIRST FLOW)
+                // In this case, 'providedName' is used as the phone number passed from controller
+                phone = providedName;
+                System.out.println("[AuthService] Guest OTP Bypass triggered for: " + phone);
             } else {
                 phone = firebaseService.verifyIdToken(idToken);
                 System.out.println("[AuthService] Verified ID Token for: " + phone);
@@ -149,9 +154,10 @@ public class AuthService {
 
         // 2. Clean phone number for normalized matching
         String cleanPhone = phone.replaceAll("\\D", "");
+        String formattedPhone = phone.startsWith("+") ? phone : "+" + (cleanPhone.length() == 10 ? "91" + cleanPhone : cleanPhone);
 
         // 3. Try finding existing user
-        Optional<User> userOpt = userRepository.findByContact(phone);
+        Optional<User> userOpt = userRepository.findByContact(formattedPhone);
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
                     .filter(u -> u.getContact() != null && u.getContact().replaceAll("\\D", "").endsWith(
@@ -161,32 +167,33 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
-            // BYPASS subscription check for Dine-In sessions (allows admins to test as guests)
-            if (restaurantId == null || restaurantId.trim().isEmpty()) {
-                // If the user was previously created as a GUEST (from a dine-in flow) and is now
-                // logging in to the merchant app, upgrade their role to ADMIN.
-                if ("GUEST".equalsIgnoreCase(user.getRole())) {
+            // BYPASS subscription check for Dine-In sessions
+            if (restaurantId == null || restaurantId.trim().isEmpty() || "guest-otp-bypass".equals(idToken)) {
+                if ("GUEST".equalsIgnoreCase(user.getRole()) && !"guest-otp-bypass".equals(idToken)) {
                     System.out.println("[AuthService] Upgrading existing GUEST to ADMIN role for merchant login: " + phone);
                     user.setRole("ADMIN");
                     userRepository.save(user);
                 }
-                checkSubscription(user);
+                // Subscription check only for merchant login
+                if (!"guest-otp-bypass".equals(idToken)) {
+                    checkSubscription(user);
+                }
             } else {
-                System.out.println("[Auth] Bypassing subscription check for existing user in Dine-In context");
+                checkSubscription(user);
             }
             return user;
         }
 
         // 4. Create New User
-        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+        if ((restaurantId != null && !restaurantId.trim().isEmpty()) || "guest-otp-bypass".equals(idToken)) {
             // DINE-IN GUEST FLOW
             System.out.println("[AuthService] Creating Guest record for Dine-In flow: " + phone);
             User guest = new User();
-            guest.setUsername("customer_" + cleanPhone);
-            guest.setContact(phone);
-            guest.setFirstName(providedName != null && !providedName.isEmpty() ? providedName : "Guest");
+            guest.setUsername("customer_" + cleanPhone + "_" + System.currentTimeMillis());
+            guest.setContact(formattedPhone);
+            guest.setFirstName(providedName != null && !providedName.isEmpty() && !"guest-otp-bypass".equals(idToken) ? providedName : "Guest");
             guest.setRole("GUEST");
-            guest.setRestaurantId(restaurantId.toLowerCase().trim());
+            guest.setRestaurantId(restaurantId != null ? restaurantId.toLowerCase().trim() : "unknown");
             guest.setPasswordHash(passwordEncoder.encode("GUEST_" + java.util.UUID.randomUUID().toString()));
 
             User savedUser = userRepository.save(guest);
@@ -194,13 +201,13 @@ public class AuthService {
 
             // Save to Customers table
             try {
-                if (customerRepository.findFirstByMobileAndRestaurantId(phone, restaurantId).isEmpty()) {
+                if (customerRepository.findFirstByMobileAndRestaurantId(formattedPhone, guest.getRestaurantId()).isEmpty()) {
                     com.pos.server.model.Customer customer = new com.pos.server.model.Customer();
-                    customer.setId("cust_" + cleanPhone + "_" + restaurantId);
-                    customer.setName(providedName != null && !providedName.isEmpty() ? providedName : "Guest " + phone);
-                    customer.setMobile(phone);
+                    customer.setId("cust_" + cleanPhone + "_" + guest.getRestaurantId());
+                    customer.setName(guest.getFirstName());
+                    customer.setMobile(formattedPhone);
                     customer.setType("New");
-                    customer.setRestaurantId(restaurantId);
+                    customer.setRestaurantId(guest.getRestaurantId());
                     customer.setJoinedAt(java.time.OffsetDateTime.now().toString());
                     customerRepository.save(customer);
                 }
@@ -208,15 +215,14 @@ public class AuthService {
                 System.err.println("[AuthService] Failed to create customer record: " + e.getMessage());
             }
             
-            checkSubscription(finalUser);
             return finalUser;
         } else {
             // AUTO-REGISTER ADMIN FLOW
             User newUser = new User();
-            newUser.setUsername(phone);
-            newUser.setContact(phone);
+            newUser.setUsername(formattedPhone);
+            newUser.setContact(formattedPhone);
             newUser.setRole("ADMIN");
-            newUser.setRestaurantId(phone); // Default to phone
+            newUser.setRestaurantId(formattedPhone); // Default to phone
             newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
 
             User savedUser = userRepository.save(newUser);
