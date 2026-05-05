@@ -49,4 +49,4 @@ jobs:
             --port=4000 \
             --timeout=600s \
             --allow-unauthenticated \
-            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_USER=postgres,DB_PASSWORD=${{ secrets.DB_PASSWORD }},JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
+            --set-env-vars="SPRING_PROFILES_ACTIVE=prod,DB_USER=postgres,DB_PASS=${{ secrets.DB_PASSWORD }},DB_DRIVER=org.postgresql.Driver,JPA_DIALECT=org.hibernate.dialect.PostgreSQLDialect,GCP_SQL_ENABLED=true,RAZORPAY_KEY_ID=rzp_test_SlZlvyY1eGk0YG,RAZORPAY_KEY_SECRET=gHgE9KOS2Alj2FixYpnN1OjB,JWT_SECRET=POS_ULTRA_SECURE_KEY_2026_XYZ,GCP_PROJECT_ID=udhyog-khaata-pos,GCP_BUCKET_NAME=pos-system-images-99"
