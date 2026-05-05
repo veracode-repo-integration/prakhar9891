@@ -5,6 +5,7 @@ echo ========================================
 echo.
 
 REM Set environment variables
+set GOOGLE_APPLICATION_CREDENTIALS=service-account.json
 set MYSQL_URL=jdbc:mysql://localhost:3306/posdb?createDatabaseIfNotExist=true^&useSSL=false^&serverTimezone=UTC^&allowPublicKeyRetrieval=true
 set MYSQL_USER=root
 set MYSQL_PASSWORD=1234567890
@@ -22,6 +23,6 @@ echo Press Ctrl+C to stop
 echo.
 
 REM Run with Maven
-call mvn spring-boot:run -DskipTests
+call mvn spring-boot:run -DskipTests -Dmaven.test.skip=true
 
 pause
