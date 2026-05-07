@@ -16,33 +16,14 @@ import java.util.Map;
 @Service
 public class RazorpayService {
 
-    @Value("${RAZORPAY_KEY_ID:}")
-    private String keyId;
-
-    @Value("${RAZORPAY_KEY_SECRET:}")
-    private String keySecret;
-
     @Value("${RAZORPAY_PLATFORM_COMMISSION_PERCENT:2}")
     private double platformCommissionPercent;
 
-    private RazorpayClient client;
-
-    @PostConstruct
-    public void init() {
-        try {
-            if (keyId != null && !keyId.isEmpty() && keySecret != null && !keySecret.isEmpty()) {
-                this.client = new RazorpayClient(keyId, keySecret);
-                System.out.println("[RazorpayService] Initialized with key: " + keyId.substring(0, Math.min(12, keyId.length())) + "...");
-            } else {
-                System.out.println("[RazorpayService] No keys configured — Razorpay disabled.");
-            }
-        } catch (RazorpayException e) {
-            System.err.println("[RazorpayService] Failed to initialize: " + e.getMessage());
-        }
-    }
-
-    public boolean isConfigured() {
-        return client != null;
+    /**
+     * Create a dynamic client for a specific merchant.
+     */
+    private RazorpayClient getClient(String keyId, String keySecret) throws RazorpayException {
+        return new RazorpayClient(keyId, keySecret);
     }
 
     /**
@@ -54,10 +35,12 @@ public class RazorpayService {
      * @param notes       Optional metadata
      * @return Map with orderId, amount, currency, status
      */
-    public Map<String, Object> createOrder(long amountPaise, String currency, String receipt, Map<String, String> notes) throws RazorpayException {
-        if (client == null) {
-            throw new IllegalStateException("Razorpay is not configured. Please set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+    public Map<String, Object> createOrder(long amountPaise, String currency, String receipt, Map<String, String> notes, String keyId, String keySecret) throws RazorpayException {
+        if (keyId == null || keySecret == null) {
+            throw new IllegalStateException("Razorpay keys are missing for this merchant.");
         }
+
+        RazorpayClient client = getClient(keyId, keySecret);
 
         JSONObject orderRequest = new JSONObject();
         orderRequest.put("amount", amountPaise);
@@ -85,7 +68,7 @@ public class RazorpayService {
      *
      * @return true if signature is valid
      */
-    public boolean verifyPaymentSignature(String orderId, String paymentId, String signature) {
+    public boolean verifyPaymentSignature(String orderId, String paymentId, String signature, String keySecret) {
         try {
             String payload = orderId + "|" + paymentId;
             Mac mac = Mac.getInstance("HmacSHA256");

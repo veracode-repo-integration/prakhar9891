@@ -1,7 +1,12 @@
 package com.pos.server.controller;
 
+import com.pos.server.model.Settings;
+import com.pos.server.repository.SettingsRepository;
 import com.pos.server.service.AuthService;
+import com.pos.server.service.CommonDataService;
 import com.pos.server.service.RazorpayService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +24,15 @@ public class RazorpayController {
     @Autowired
     private RazorpayService razorpayService;
 
+    @Autowired
+    private SettingsRepository settingsRepository;
+
+    @Autowired
+    private CommonDataService commonDataService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * Create a Razorpay Order.
      * Frontend calls this to get an order_id before opening checkout.
@@ -29,10 +43,18 @@ public class RazorpayController {
     public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> body,
                                          @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
-            // Validate auth — this endpoint needs a logged-in user OR is called from dine-in (public)
-            // For dine-in, restaurantId comes from the scan URL; for POS, from the header
-            if (!razorpayService.isConfigured()) {
-                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Razorpay is not configured on the server."));
+            if (restaurantId == null || restaurantId.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Restaurant ID header required."));
+            }
+
+            Settings settings = commonDataService.getSettings(restaurantId);
+            JsonNode rawJson = settings.getRawSettingsJson() != null ? objectMapper.readTree(settings.getRawSettingsJson()) : null;
+            
+            String rId = rawJson != null && rawJson.has("razorpayKeyId") ? rawJson.get("razorpayKeyId").asText() : null;
+            String rSecret = rawJson != null && rawJson.has("razorpayKeySecret") ? rawJson.get("razorpayKeySecret").asText() : null;
+
+            if (rId == null || rSecret == null) {
+                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Razorpay is not configured for this restaurant."));
             }
 
             // Amount in rupees from frontend → convert to paise
@@ -56,11 +78,11 @@ public class RazorpayController {
                 notes.put("restaurantId", restaurantId);
             }
 
-            Map<String, Object> order = razorpayService.createOrder(amountPaise, currency, receipt, notes);
+            Map<String, Object> order = razorpayService.createOrder(amountPaise, currency, receipt, notes, rId, rSecret);
 
             Map<String, Object> response = new HashMap<>(order);
             response.put("ok", true);
-            response.put("keyId", razorpayService.getKeyId());
+            response.put("keyId", rId);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -81,6 +103,18 @@ public class RazorpayController {
     public ResponseEntity<?> verifyPayment(@RequestBody Map<String, String> body,
                                            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            if (restaurantId == null || restaurantId.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Restaurant ID header required."));
+            }
+
+            Settings settings = commonDataService.getSettings(restaurantId);
+            JsonNode rawJson = settings.getRawSettingsJson() != null ? objectMapper.readTree(settings.getRawSettingsJson()) : null;
+            String rSecret = rawJson != null && rawJson.has("razorpayKeySecret") ? rawJson.get("razorpayKeySecret").asText() : null;
+
+            if (rSecret == null) {
+                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Razorpay keys not found for this restaurant."));
+            }
+
             String orderId = body.get("razorpay_order_id");
             String paymentId = body.get("razorpay_payment_id");
             String signature = body.get("razorpay_signature");
@@ -89,7 +123,7 @@ public class RazorpayController {
                 return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Missing required payment fields."));
             }
 
-            boolean valid = razorpayService.verifyPaymentSignature(orderId, paymentId, signature);
+            boolean valid = razorpayService.verifyPaymentSignature(orderId, paymentId, signature, rSecret);
 
             if (valid) {
                 return ResponseEntity.ok(Map.of(

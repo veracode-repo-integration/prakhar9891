@@ -11,15 +11,6 @@ import java.util.Base64;
 @Service
 public class PhonePeService {
 
-    @Value("${PHONEPE_MERCHANT_ID:}")
-    private String merchantId;
-
-    @Value("${PHONEPE_SALT_KEY:}")
-    private String saltKey;
-
-    @Value("${PHONEPE_SALT_INDEX:1}")
-    private String saltIndex;
-
     @Value("${PHONEPE_ENV:PRODUCTION}") // UAT or PRODUCTION
     private String environment;
 
@@ -31,10 +22,9 @@ public class PhonePeService {
     }
 
     /**
-     * Generate the X-VERIFY header for PhonePe API requests.
-     * Formula: SHA256(Base64Payload + endpoint + saltKey) + "###" + saltIndex
+     * Generate the X-VERIFY header for PhonePe API requests using merchant-specific salt.
      */
-    public String generateXVerify(String base64Payload, String endpoint) {
+    public String generateXVerify(String base64Payload, String endpoint, String saltKey, String saltIndex) {
         try {
             String stringToHash = base64Payload + endpoint + saltKey;
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
@@ -47,7 +37,7 @@ public class PhonePeService {
                 hexString.append(hex);
             }
             
-            return hexString.toString() + "###" + saltIndex;
+            return hexString.toString() + "###" + (saltIndex != null ? saltIndex : "1");
         } catch (Exception e) {
             throw new RuntimeException("Failed to generate PhonePe X-VERIFY header", e);
         }
@@ -56,19 +46,19 @@ public class PhonePeService {
     /**
      * Create a Base64 encoded JSON payload for the payment request.
      */
-    public String createPaymentPayload(String merchantTransactionId, long amountPaise, String callbackUrl, String mobileNumber) {
+    public String createPaymentPayload(String merchantId, String merchantTransactionId, long amountPaise, String callbackUrl, String mobileNumber) {
         JSONObject payload = new JSONObject();
         payload.put("merchantId", merchantId);
         payload.put("merchantTransactionId", merchantTransactionId);
         payload.put("merchantUserId", "USER_" + mobileNumber);
         payload.put("amount", amountPaise);
-        payload.put("redirectUrl", callbackUrl); // For intent flow, we can use this for polling
+        payload.put("redirectUrl", callbackUrl);
         payload.put("redirectMode", "POST");
         payload.put("callbackUrl", callbackUrl);
         payload.put("mobileNumber", mobileNumber);
         
         JSONObject paymentInstrument = new JSONObject();
-        paymentInstrument.put("type", "PAY_PAGE"); // Default Pay Page, mobile handles intent
+        paymentInstrument.put("type", "PAY_PAGE");
         payload.put("paymentInstrument", paymentInstrument);
 
         return Base64.getEncoder().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
