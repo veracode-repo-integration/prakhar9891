@@ -64,11 +64,4 @@ public class PhonePeService {
         return Base64.getEncoder().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
     }
 
-    public String getMerchantId() {
-        return merchantId;
-    }
-
-    public boolean isConfigured() {
-        return merchantId != null && !merchantId.isEmpty() && saltKey != null && !saltKey.isEmpty();
-    }
 }

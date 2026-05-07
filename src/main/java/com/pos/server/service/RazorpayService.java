@@ -90,12 +90,4 @@ public class RazorpayService {
             return false;
         }
     }
-
-    public double getPlatformCommissionPercent() {
-        return platformCommissionPercent;
-    }
-
-    public String getKeyId() {
-        return keyId;
-    }
 }
