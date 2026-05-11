@@ -10,7 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +29,9 @@ public class DineInController {
 
     @Autowired
     private SettingsRepository settingsRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     /**
      * Scan QR and Validate Location
@@ -64,9 +70,9 @@ public class DineInController {
                 ? settingsRepository.findById("default")
                 : settingsRepository.findFirstByRestaurantId(restaurantId.toLowerCase().trim());
 
-        if (settingsOpt.isPresent()) {
-            Settings settings = settingsOpt.get();
+        Settings settings = settingsOpt.orElse(null);
 
+        if (settings != null) {
             // Check if Store Location is configured
             if (settings.getLatitude() != null && settings.getLongitude() != null) {
                 double distance = LocationUtils.distance(
@@ -82,16 +88,49 @@ public class DineInController {
                             "distance_meters", distance));
                 }
             } else {
-                // If location isn't configured, we assume validation is bypassed for now to
-                // allow testing
+                // If location isn't configured, we assume validation is bypassed for now to allow testing
                 log.warn("Restaurant {} location not configured. Skipping location check.", restaurantId);
             }
         }
 
-        // 3. Success
-        return ResponseEntity.ok(Map.of(
-                "ok", true,
-                "message", "Table verified",
-                "table", tableOpt.get()));
+        // 3. Prepare Response with Settings
+        Map<String, Object> response = new HashMap<>();
+        response.put("ok", true);
+        response.put("message", "Table verified");
+        response.put("table", table);
+
+        if (settings != null) {
+            try {
+                ObjectNode node;
+                if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
+                    node = (ObjectNode) objectMapper.readTree(settings.getRawSettingsJson());
+                } else {
+                    node = objectMapper.createObjectNode();
+                }
+
+                // Merge legacy fields with null protection (same logic as SettingsController)
+                node.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
+                node.put("taxRate", settings.getTaxRate() != null ? settings.getTaxRate() : 0.0);
+                node.put("upiId", settings.getUpiId() != null ? settings.getUpiId() : "");
+                node.put("shopAddress", settings.getAddress() != null ? settings.getAddress() : "");
+                node.put("gstNumber", settings.getGstNumber() != null ? settings.getGstNumber() : "");
+                node.put("isTaxInclusive", settings.getTaxInclusive() != null ? settings.getTaxInclusive() : false);
+                node.put("stateCode", settings.getStateCode() != null ? settings.getStateCode() : "27");
+                node.put("stateName", settings.getStateName() != null ? settings.getStateName() : "Maharashtra");
+                node.put("gstCategory", settings.getGstCategory() != null ? settings.getGstCategory() : "Regular");
+                node.put("invoicePrefix", settings.getInvoicePrefix() != null ? settings.getInvoicePrefix() : "INV-2026-");
+
+                if (settings.getLatitude() != null) node.put("latitude", settings.getLatitude());
+                if (settings.getLongitude() != null) node.put("longitude", settings.getLongitude());
+                if (settings.getGeofenceRadius() != null) node.put("geofenceRadius", settings.getGeofenceRadius());
+                node.put("disableStockDecrement", settings.getDisableStockDecrement() != null ? settings.getDisableStockDecrement() : false);
+
+                response.put("settings", node);
+            } catch (Exception e) {
+                log.error("Failed to parse settings for scan response", e);
+            }
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
