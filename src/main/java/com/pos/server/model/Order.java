@@ -60,6 +60,9 @@ public class Order {
 
     private double total;
 
+    @Column(name = "is_tax_inclusive")
+    private Boolean isTaxInclusive = false;
+
     // Timestamps
     @Column(name = "order_date")
     private String date; // ISO string

@@ -228,9 +228,32 @@ public class OrderController {
             response.put("m", order.getMethod() != null ? order.getMethod() : "CASH");
             response.put("c", order.getCustomer() != null ? order.getCustomer().getName() : "Walk-in Guest");
             response.put("cm", order.getCustomer() != null ? order.getCustomer().getMobile() : "");
-            response.put("s", itemsGross - discountAmount);
-            response.put("x", order.getTaxAmount() != null ? order.getTaxAmount() : 0.0);
+            boolean isTaxInclusive = Boolean.TRUE.equals(order.getIsTaxInclusive());
+            double subtotalVal = order.getSubtotal();
+            double taxVal = order.getTaxAmount() != null ? order.getTaxAmount() : 0.0;
+            // Defensive correction: if tax is inclusive, but subtotal in DB was saved equal to itemsGross,
+            // we dynamically correct it to the true tax-exclusive base.
+            if (isTaxInclusive && Math.abs(subtotalVal - itemsGross) < 0.05) {
+                subtotalVal = itemsGross - discountAmount - taxVal;
+            }
+            response.put("s", subtotalVal);
+            response.put("inc", isTaxInclusive);
+            response.put("x", taxVal);
             response.put("t", order.getTotal());
+            response.put("cgst", order.getCgstAmount() != null ? order.getCgstAmount() : taxVal / 2.0);
+            response.put("sgst", order.getSgstAmount() != null ? order.getSgstAmount() : taxVal / 2.0);
+            
+            double baseForRate = subtotalVal - discountAmount;
+            double calculatedCgstRate = 0.0;
+            double calculatedSgstRate = 0.0;
+            if (baseForRate > 0) {
+                double cgstAmt = order.getCgstAmount() != null ? order.getCgstAmount() : taxVal / 2.0;
+                double sgstAmt = order.getSgstAmount() != null ? order.getSgstAmount() : taxVal / 2.0;
+                calculatedCgstRate = (cgstAmt / baseForRate) * 100.0;
+                calculatedSgstRate = (sgstAmt / baseForRate) * 100.0;
+            }
+            response.put("cgstRate", calculatedCgstRate);
+            response.put("sgstRate", calculatedSgstRate);
             response.put("it", items);
 
             return ResponseEntity.ok(response);
