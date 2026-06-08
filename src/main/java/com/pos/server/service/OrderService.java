@@ -440,4 +440,9 @@ public class OrderService {
         }
         return orderRepository.saveAndFlush(order);
     }
+
+    public Order getOrderByInvoiceNumber(String invoiceNumber) {
+        log.info("Fetching public order by invoice number: {}", invoiceNumber);
+        return orderRepository.findFirstByInvoiceNumberOrderByCreatedAtDesc(invoiceNumber).orElse(null);
+    }
 }
