@@ -17,6 +17,8 @@ public class CheckoutRequest {
     private double taxRate;
     private double taxAmount;
     private double total; // Frontend calculated total including tax/discount
+    private double subtotal;
+    private Boolean isTaxInclusive;
     private String orderType; // 'dine-in', 'takeaway'
     private String tableId;
     private String status; // 'pending', 'paid'

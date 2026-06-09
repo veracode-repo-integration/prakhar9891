@@ -13,11 +13,12 @@ public class UserResponse {
     private String restaurantId;
     private String onlineStatus;
     private java.util.List<String> allowedFeatures;
+    private String restaurantStatus;
 
     // NO passwordHash field here. IMPOSSIBLE to leak.
 
     public UserResponse(Long id, String username, String name, String email, String contact, String role,
-            String restaurantId, String onlineStatus, java.util.List<String> allowedFeatures) {
+            String restaurantId, String onlineStatus, java.util.List<String> allowedFeatures, String restaurantStatus) {
         this.id = id;
         this.username = username;
         this.name = name;
@@ -27,10 +28,16 @@ public class UserResponse {
         this.restaurantId = restaurantId;
         this.onlineStatus = onlineStatus;
         this.allowedFeatures = allowedFeatures;
+        this.restaurantStatus = restaurantStatus;
+    }
+
+    public UserResponse(Long id, String username, String name, String email, String contact, String role,
+            String restaurantId, String onlineStatus, java.util.List<String> allowedFeatures) {
+        this(id, username, name, email, contact, role, restaurantId, onlineStatus, allowedFeatures, "ACTIVE");
     }
 
     public UserResponse(Long id, String username, String name, String email, String contact, String role,
             String restaurantId, String onlineStatus) {
-        this(id, username, name, email, contact, role, restaurantId, onlineStatus, new java.util.ArrayList<>());
+        this(id, username, name, email, contact, role, restaurantId, onlineStatus, new java.util.ArrayList<>(), "ACTIVE");
     }
 }

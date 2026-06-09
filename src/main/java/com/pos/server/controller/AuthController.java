@@ -47,6 +47,7 @@ public class AuthController {
     private com.pos.server.dto.UserResponse createUserResponse(User user) {
         java.util.List<String> allowedFeatures = new java.util.ArrayList<>();
         String onlineStatus = "OPEN";
+        String restaurantStatus = "ACTIVE";
         if (user.getRestaurantId() != null) {
             com.pos.server.model.Restaurant r = restaurantRepository.findById(user.getRestaurantId()).orElse(null);
             if (r != null) {
@@ -54,6 +55,7 @@ public class AuthController {
                     allowedFeatures.addAll(r.getAllowedFeatures());
                 }
                 onlineStatus = r.getOnlineStatus() != null ? r.getOnlineStatus() : "OPEN";
+                restaurantStatus = r.getStatus() != null ? r.getStatus() : "ACTIVE";
             }
         }
         return new com.pos.server.dto.UserResponse(
@@ -65,7 +67,8 @@ public class AuthController {
                 user.getRole(),
                 user.getRestaurantId(),
                 onlineStatus,
-                allowedFeatures);
+                allowedFeatures,
+                restaurantStatus);
     }
 
     @GetMapping("/check-user")

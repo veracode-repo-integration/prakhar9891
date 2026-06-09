@@ -236,7 +236,12 @@ public class OrderService {
         }
 
         // 4. Financials
-        order.setSubtotal(request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum());
+        if (request.getSubtotal() > 0) {
+            order.setSubtotal(request.getSubtotal());
+        } else {
+            order.setSubtotal(request.getItems().stream().mapToDouble(i -> i.getPrice() * i.getQty()).sum());
+        }
+        order.setIsTaxInclusive(request.getIsTaxInclusive() != null ? request.getIsTaxInclusive() : false);
         order.setTaxRate(request.getTaxRate());
         order.setTaxAmount(request.getTaxAmount());
         
@@ -439,5 +444,10 @@ public class OrderService {
             order.setCreatedAt(System.currentTimeMillis());
         }
         return orderRepository.saveAndFlush(order);
+    }
+
+    public Order getOrderByInvoiceNumber(String invoiceNumber) {
+        log.info("Fetching public order by invoice number: {}", invoiceNumber);
+        return orderRepository.findFirstByInvoiceNumberOrderByCreatedAtDesc(invoiceNumber).orElse(null);
     }
 }

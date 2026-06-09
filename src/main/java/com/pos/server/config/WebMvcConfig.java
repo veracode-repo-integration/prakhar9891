@@ -12,6 +12,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @org.springframework.beans.factory.annotation.Autowired
     private com.pos.server.security.FeatureGuardInterceptor featureGuardInterceptor;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.pos.server.security.RateLimitInterceptor rateLimitInterceptor;
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         // Serve files from the 'uploads' directory at '/uploads/**'
@@ -21,6 +24,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+        registry.addInterceptor(rateLimitInterceptor).addPathPatterns("/api/**");
         registry.addInterceptor(featureGuardInterceptor).addPathPatterns("/api/**");
     }
 }

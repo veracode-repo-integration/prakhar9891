@@ -40,7 +40,7 @@ Go to your GitHub repo **Settings > Secrets > Actions** and add:
 | :--- | :--- |
 | `DB_URL` | `jdbc:postgresql:///posdb?cloudSqlInstance=PROJECT_ID:us-central1:INSTANCE_ID&socketFactory=com.google.cloud.sql.postgres.SocketFactory` |
 | `DB_USER` | `postgres` |
-| `DB_PASSWORD` | `your_postgres_password` |
+| `DB_PASSWORD` | `Billing@2026` |
 | `GCP_PROJECT_ID` | `your-google-project-id` |
 | `GCP_BUCKET_NAME` | `pos-system-images-yourproject` |
 

@@ -45,10 +45,29 @@ public class GlobalExceptionHandler {
                 status = HttpStatus.FORBIDDEN;
             } else if (message.contains("Unauthorized")) {
                 status = HttpStatus.UNAUTHORIZED;
+            } else if (message.toLowerCase().contains("javax.persistence") || 
+                       message.toLowerCase().contains("nonuniqueresult") || 
+                       message.toLowerCase().contains("query did not return") ||
+                       message.toLowerCase().contains("hibernate") ||
+                       message.toLowerCase().contains("sql") ||
+                       message.toLowerCase().contains("constraint")) {
+                message = "An internal data conflict or database error occurred. Please try again.";
             }
+        } else {
+            message = "An unexpected error occurred.";
         }
 
         return ResponseEntity.status(status).body(Map.of("ok", false, "message", message));
+    }
+
+    @ExceptionHandler({
+        org.springframework.dao.DataAccessException.class,
+        javax.persistence.PersistenceException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleDatabaseException(Exception ex) {
+        log.error("Database or persistence exception: ", ex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("ok", false, "message", "A database conflict or validation error occurred. Please try again."));
     }
 
     @ExceptionHandler(Exception.class)

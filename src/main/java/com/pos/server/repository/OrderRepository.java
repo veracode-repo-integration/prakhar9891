@@ -13,4 +13,6 @@ public interface OrderRepository extends JpaRepository<Order, String> {
                         org.springframework.data.domain.Pageable pageable);
 
         java.util.Optional<Order> findByIdAndRestaurantId(String id, String restaurantId);
+
+        java.util.Optional<Order> findFirstByInvoiceNumberOrderByCreatedAtDesc(String invoiceNumber);
 }

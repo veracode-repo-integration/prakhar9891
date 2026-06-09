@@ -33,6 +33,10 @@ public class OrderController {
     @Autowired
     private org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private com.pos.server.service.CommonDataService commonDataService;
+
+
     @GetMapping("/v2/pos-orders/test-push")
     public ResponseEntity<String> testPush(@RequestParam String restaurantId) {
         try {
@@ -174,6 +178,85 @@ public class OrderController {
                 return ResponseEntity.ok(Map.of("ok", true, "order", updated));
             }
             return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Order not found"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/v2/pos-orders/public/invoice/{invoiceId}")
+    public ResponseEntity<?> getPublicInvoice(@PathVariable String invoiceId) {
+        try {
+            Order order = orderService.getOrderByInvoiceNumber(invoiceId);
+            if (order == null) {
+                return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Invoice not found"));
+            }
+
+            com.pos.server.model.Settings settings = commonDataService.getSettings(order.getRestaurantId());
+
+            double itemsGross = order.getItems().stream().mapToDouble(it -> it.getPrice() * it.getQty()).sum();
+            double discountAmount = order.getDiscountValue();
+            if ("percent".equalsIgnoreCase(order.getDiscountType())) {
+                discountAmount = itemsGross * (order.getDiscountValue() / 100.0);
+            }
+
+            List<Map<String, Object>> items = new java.util.ArrayList<>();
+            for (com.pos.server.model.OrderItem it : order.getItems()) {
+                items.add(Map.of(
+                    "n", it.getName() != null ? it.getName() : "",
+                    "q", it.getQty(),
+                    "p", it.getPrice()
+                ));
+            }
+
+            String contactNumber = "";
+            try {
+                if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().isEmpty()) {
+                    com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(settings.getRawSettingsJson());
+                    if (node.has("contactNumber")) {
+                        contactNumber = node.get("contactNumber").asText();
+                    }
+                }
+            } catch (Exception e) {}
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("n", settings.getMerchantName() != null ? settings.getMerchantName() : "OJAS POS");
+            response.put("a", settings.getAddress() != null ? settings.getAddress() : "");
+            response.put("p", contactNumber);
+            response.put("g", settings.getGstNumber() != null ? settings.getGstNumber() : "");
+            response.put("i", order.getInvoiceNumber() != null ? order.getInvoiceNumber() : order.getId());
+            response.put("d", order.getCreatedAt());
+            response.put("m", order.getMethod() != null ? order.getMethod() : "CASH");
+            response.put("c", order.getCustomer() != null ? order.getCustomer().getName() : "Walk-in Guest");
+            response.put("cm", order.getCustomer() != null ? order.getCustomer().getMobile() : "");
+            boolean isTaxInclusive = Boolean.TRUE.equals(order.getIsTaxInclusive());
+            double subtotalVal = order.getSubtotal();
+            double taxVal = order.getTaxAmount() != null ? order.getTaxAmount() : 0.0;
+            // Defensive correction: if tax is inclusive, but subtotal in DB was saved equal to itemsGross,
+            // we dynamically correct it to the true tax-exclusive base.
+            if (isTaxInclusive && Math.abs(subtotalVal - itemsGross) < 0.05) {
+                subtotalVal = itemsGross - discountAmount - taxVal;
+            }
+            response.put("s", subtotalVal);
+            response.put("inc", isTaxInclusive);
+            response.put("x", taxVal);
+            response.put("t", order.getTotal());
+            response.put("cgst", order.getCgstAmount() != null ? order.getCgstAmount() : taxVal / 2.0);
+            response.put("sgst", order.getSgstAmount() != null ? order.getSgstAmount() : taxVal / 2.0);
+            
+            double baseForRate = subtotalVal - discountAmount;
+            double calculatedCgstRate = 0.0;
+            double calculatedSgstRate = 0.0;
+            if (baseForRate > 0) {
+                double cgstAmt = order.getCgstAmount() != null ? order.getCgstAmount() : taxVal / 2.0;
+                double sgstAmt = order.getSgstAmount() != null ? order.getSgstAmount() : taxVal / 2.0;
+                calculatedCgstRate = (cgstAmt / baseForRate) * 100.0;
+                calculatedSgstRate = (sgstAmt / baseForRate) * 100.0;
+            }
+            response.put("cgstRate", calculatedCgstRate);
+            response.put("sgstRate", calculatedSgstRate);
+            response.put("it", items);
+
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }

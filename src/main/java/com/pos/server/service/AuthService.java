@@ -90,7 +90,7 @@ public class AuthService {
         if (userOpt.isEmpty())
             userOpt = userRepository.findByEmail(identifier);
         if (userOpt.isEmpty())
-            userOpt = userRepository.findByContact(identifier);
+            userOpt = userRepository.findFirstByContact(identifier);
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
@@ -157,7 +157,13 @@ public class AuthService {
         String formattedPhone = phone.startsWith("+") ? phone : "+" + (cleanPhone.length() == 10 ? "91" + cleanPhone : cleanPhone);
 
         // 3. Try finding existing user
-        Optional<User> userOpt = userRepository.findByContact(formattedPhone);
+        Optional<User> userOpt = Optional.empty();
+        if (restaurantId != null && !restaurantId.trim().isEmpty()) {
+            userOpt = userRepository.findFirstByContactAndRestaurantId(formattedPhone, restaurantId.toLowerCase().trim());
+        }
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findFirstByContact(formattedPhone);
+        }
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findAll().stream()
                     .filter(u -> u.getContact() != null && u.getContact().replaceAll("\\D", "").endsWith(

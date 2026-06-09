@@ -82,10 +82,12 @@ public class DineInController {
                 int radius = settings.getGeofenceRadius() != null ? settings.getGeofenceRadius() : 50;
 
                 if (distance > radius) {
-                    return ResponseEntity.status(403).body(Map.of(
-                            "ok", false,
-                            "message", "You must be inside the restaurant to order.",
-                            "distance_meters", distance));
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("ok", false);
+                    errorResponse.put("message", "You must be inside the restaurant to order.");
+                    errorResponse.put("distance_meters", distance);
+                    errorResponse.put("merchantName", settings.getMerchantName() != null ? settings.getMerchantName() : "");
+                    return ResponseEntity.status(403).body(errorResponse);
                 }
             } else {
                 // If location isn't configured, we assume validation is bypassed for now to allow testing
