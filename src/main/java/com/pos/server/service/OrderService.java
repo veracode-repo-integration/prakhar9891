@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.security.SecureRandom;
 
 @Service
 @Slf4j
@@ -48,6 +49,21 @@ public class OrderService {
     private com.pos.server.service.SirenSchedulerService sirenSchedulerService;
 
     private final ObjectMapper mapper = new ObjectMapper();
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    /**
+     * Generate a cryptographically secure random hex token for public invoice access.
+     * 8 hex chars = 4 bytes = 2^32 possibilities — unguessable but short enough for URLs.
+     */
+    private String generateAccessToken() {
+        byte[] bytes = new byte[4];
+        SECURE_RANDOM.nextBytes(bytes);
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
+    }
 
     public List<Order> getAllOrders(String restaurantId) {
         log.info("Fetching orders for restaurant: {}", restaurantId);
@@ -264,6 +280,9 @@ public class OrderService {
         order.setStatus(
                 request.getStatus() != null ? request.getStatus() : (request.isPayLater() ? "pending" : "completed"));
 
+        // Generate secure access token for public invoice URL
+        order.setAccessToken(generateAccessToken());
+
         Order savedOrder = orderRepository.saveAndFlush(order);
 
         // --- VACATE TABLE IF DINE-IN ---
@@ -439,6 +458,9 @@ public class OrderService {
         }
         if (order.getInvoiceNumber() == null) {
             order.setInvoiceNumber(commonDataService.getNextInvoiceNumber(order.getRestaurantId()));
+        }
+        if (order.getAccessToken() == null) {
+            order.setAccessToken(generateAccessToken());
         }
         if (order.getCreatedAt() == 0) {
             order.setCreatedAt(System.currentTimeMillis());

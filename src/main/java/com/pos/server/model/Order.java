@@ -158,4 +158,7 @@ public class Order {
 
     @Column(name = "rider_info", columnDefinition = "TEXT")
     private String riderInfo; // JSON string
+
+    @Column(name = "access_token", length = 16)
+    private String accessToken; // Short hex token for public invoice URL security
 }

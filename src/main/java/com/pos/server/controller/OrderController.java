@@ -184,11 +184,24 @@ public class OrderController {
     }
 
     @GetMapping("/v2/pos-orders/public/invoice/{invoiceId}")
-    public ResponseEntity<?> getPublicInvoice(@PathVariable String invoiceId) {
+    public ResponseEntity<?> getPublicInvoice(
+            @PathVariable String invoiceId,
+            @RequestParam(value = "token", required = false) String token) {
         try {
             Order order = orderService.getOrderByInvoiceNumber(invoiceId);
             if (order == null) {
                 return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Invoice not found"));
+            }
+
+            // Security: Validate access token if the order has one
+            // Legacy orders (without accessToken) are allowed through for backward compatibility
+            if (order.getAccessToken() != null && !order.getAccessToken().isEmpty()) {
+                if (token == null || !token.equals(order.getAccessToken())) {
+                    return ResponseEntity.status(403).body(Map.of(
+                        "ok", false,
+                        "message", "Access denied. Invalid or missing invoice token."
+                    ));
+                }
             }
 
             com.pos.server.model.Settings settings = commonDataService.getSettings(order.getRestaurantId());
