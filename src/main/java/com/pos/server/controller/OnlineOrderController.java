@@ -24,7 +24,7 @@ public class OnlineOrderController {
 
     @Autowired
     private ProductService productService;
-    
+
     @Autowired
     private AuthService authService;
 
@@ -50,22 +50,24 @@ public class OnlineOrderController {
     public ResponseEntity<?> receiveOnlineOrder(
             @RequestBody Map<String, Object> payload,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
-        
-        System.out.println("[FORENSIC] [WEBHOOK-HIT] RID_HEADER: " + restaurantId + " | PAYLOAD: " + (payload != null ? "YES" : "NO"));
-        
+
+        System.out.println("[FORENSIC] [WEBHOOK-HIT] RID_HEADER: " + restaurantId + " | PAYLOAD: "
+                + (payload != null ? "YES" : "NO"));
+
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             System.err.println("[FORENSIC] [WEBHOOK-ERR] REJECTED: X-Restaurant-Id header is MISSING!");
             return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
         }
-        
+
         try {
             // 1. Extract Basic Info
             Map<String, Object> orderData = (Map<String, Object>) payload.get("order");
-            if (orderData == null) orderData = payload; // Fallback if not nested
+            if (orderData == null)
+                orderData = payload; // Fallback if not nested
 
             String externalId = (String) orderData.get("id");
             String platform = (String) orderData.get("platform"); // 'ZOMATO', 'SWIGGY'
-            
+
             // 2. Initialize POS Order
             Order posOrder = new Order();
             posOrder.setId("ONL-" + externalId);
@@ -86,12 +88,14 @@ public class OnlineOrderController {
             for (Map<String, Object> eItem : externalItems) {
                 Object rawId = eItem.get("id");
                 Object rawQty = eItem.get("quantity");
-                
-                if (rawId == null || rawQty == null) continue;
-                
+
+                if (rawId == null || rawQty == null)
+                    continue;
+
                 String eProductId = String.valueOf(rawId);
-                int qty = (rawQty instanceof Number) ? ((Number) rawQty).intValue() : Integer.parseInt(String.valueOf(rawQty));
-                
+                int qty = (rawQty instanceof Number) ? ((Number) rawQty).intValue()
+                        : Integer.parseInt(String.valueOf(rawQty));
+
                 // Find local product by mapping
                 Product product = findProductByMapping(restaurantId, platform, eProductId);
                 if (product != null) {
@@ -106,7 +110,8 @@ public class OnlineOrderController {
                                 finalPrice = Double.parseDouble(String.valueOf(priceObj));
                             }
                         }
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                    }
 
                     OrderItem localItem = new OrderItem();
                     localItem.setItemId(UUID.randomUUID().toString());
@@ -114,16 +119,16 @@ public class OnlineOrderController {
                     localItem.setName(product.getName());
                     localItem.setPrice(finalPrice);
                     localItem.setQty(qty);
-                    
+
                     // --- SNAPSHOT HSN & TAX FOR AUDIT ---
                     localItem.setHsnCode(product.getHsnCode() != null ? product.getHsnCode() : "9963");
                     localItem.setTaxCategory(product.getTaxCategory());
-                    
+
                     // Default to 5% if unspecified (Standard for restaurants)
                     double taxRate = product.getTax() != null ? product.getTax() : 5.0;
                     double itemTotal = finalPrice * qty;
                     double taxAmount = (itemTotal * taxRate) / 100.0;
-                    
+
                     localItem.setTaxRate(taxRate);
                     localItem.setTaxAmount(taxAmount);
                     localItem.setCgstAmount(taxAmount / 2.0);
@@ -138,41 +143,39 @@ public class OnlineOrderController {
 
             posOrder.setItems(localItems);
             posOrder.setSubtotal(subtotal);
-            
+
             // Calculate total tax for the entire order
             double totalTax = localItems.stream().mapToDouble(i -> i.getTaxAmount()).sum();
             posOrder.setTaxAmount(totalTax);
             posOrder.setCgstAmount(totalTax / 2.0);
             posOrder.setSgstAmount(totalTax / 2.0);
             posOrder.setTotal(subtotal + totalTax);
-            
+
             // 4. Save & Notify
             Order saved = orderService.saveOrderDirectly(posOrder);
-            
+
             messagingTemplate.convertAndSend("/topic/orders", Map.of(
                     "order", saved,
                     "type", "NEW_ONLINE_ORDER",
-                    "actingUser", "aggregator"
-            ));
+                    "actingUser", "aggregator"));
 
             // --- UNIFIED ELITE NOTIFICATION DISPATCH ---
             try {
                 System.out.println("[FORENSIC] Webhook DISPATCH for RID: " + restaurantId);
                 List<String> tokens = authService.findTokensByRestaurantIdSmart(restaurantId);
-                
+
                 if (!tokens.isEmpty()) {
                     System.out.println("[FORENSIC] Webhook DISPATCH to " + tokens.size() + " tokens: " + tokens);
                     String title = "New " + platform + " Order!";
                     String body = "Order #" + externalId + " for ₹" + saved.getTotal();
                     Map<String, String> data = Map.of(
-                        "type", "NEW_ONLINE_ORDER",
-                        "orderId", saved.getId(),
-                        "restaurantId", restaurantId,
-                        "diagnostic_ts", String.valueOf(System.currentTimeMillis())
-                    );
+                            "type", "NEW_ONLINE_ORDER",
+                            "orderId", saved.getId(),
+                            "restaurantId", restaurantId,
+                            "diagnostic_ts", String.valueOf(System.currentTimeMillis()));
                     fcmService.dispatchHighPrioritySiren(tokens, title, body, data);
                     System.out.println("[FORENSIC] Webhook Push sent to " + tokens.size() + " devices.");
-                    
+
                     // --- TRIGGER THE ATOMIC HAMMER ---
                     sirenSchedulerService.startSiren(saved);
                 } else {
@@ -181,7 +184,6 @@ public class OnlineOrderController {
             } catch (Exception fcmEx) {
                 System.err.println("[FORENSIC] Webhook CRITICAL PUSH FAILURE: " + fcmEx.getMessage());
             }
-
 
             return ResponseEntity.ok(Map.of("status", "success", "pos_order_id", saved.getId()));
 
@@ -194,11 +196,12 @@ public class OnlineOrderController {
     private Product findProductByMapping(String restaurantId, String platform, String externalId) {
         List<Product> allProducts = productService.getAllProductsNoCache(restaurantId);
         for (Product p : allProducts) {
-            if (p.getExternalMappings() == null) continue;
+            if (p.getExternalMappings() == null)
+                continue;
             try {
                 Map<String, Object> mappings = objectMapper.readValue(p.getExternalMappings(), Map.class);
                 Object platformMapping = mappings.get(platform);
-                
+
                 if (platformMapping instanceof Map) {
                     Map<String, Object> mapObj = (Map<String, Object>) platformMapping;
                     if (externalId.equals(String.valueOf(mapObj.get("id")))) {
@@ -209,7 +212,8 @@ public class OnlineOrderController {
                         return p;
                     }
                 }
-            } catch (Exception e) { }
+            } catch (Exception e) {
+            }
         }
         return null;
     }
