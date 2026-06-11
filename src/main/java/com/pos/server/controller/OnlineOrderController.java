@@ -4,6 +4,7 @@ import com.pos.server.model.Order;
 import com.pos.server.model.OrderItem;
 import com.pos.server.model.Product;
 import com.pos.server.model.Restaurant;
+import com.pos.server.model.Settings;
 import com.pos.server.service.AuthService;
 import com.pos.server.service.OrderService;
 import com.pos.server.service.ProductService;
@@ -83,7 +84,17 @@ public class OnlineOrderController {
             // 2. Fetch all products
             List<Product> products = productService.getAllProductsNoCache(restaurantId);
             List<Map<String, Object>> responseList = new ArrayList<>();
-            String prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+            String pUpper = (platform != null ? platform.trim().toUpperCase() : "");
+            String prefix;
+            if ("GHARTAK".equals(pUpper)) {
+                prefix = "gt";
+            } else if ("SWIGGY".equals(pUpper)) {
+                prefix = "sw";
+            } else if ("ZOMATO".equals(pUpper)) {
+                prefix = "zo";
+            } else {
+                prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+            }
 
             for (Product p : products) {
                 // Calculate Online ID (custom mapping or fallback)
@@ -349,7 +360,17 @@ public class OnlineOrderController {
         }
         
         // 2. Fallback to naming convention: [prefix]_[productname]
-        String prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+        String pUpper = (platform != null ? platform.trim().toUpperCase() : "");
+        String prefix;
+        if ("GHARTAK".equals(pUpper)) {
+            prefix = "gt";
+        } else if ("SWIGGY".equals(pUpper)) {
+            prefix = "sw";
+        } else if ("ZOMATO".equals(pUpper)) {
+            prefix = "zo";
+        } else {
+            prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+        }
         for (Product p : allProducts) {
             String fallbackId = prefix + "_" + p.getName().replaceAll("\\s+", "").toLowerCase();
             if (externalId.equalsIgnoreCase(fallbackId)) {
