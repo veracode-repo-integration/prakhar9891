@@ -43,6 +43,111 @@ public class OnlineOrderController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private com.pos.server.service.CommonDataService commonDataService;
+
+    /**
+     * Pull menu API for online aggregators (e.g. Ghar Tak)
+     */
+    @GetMapping("/menu")
+    public ResponseEntity<?> getMenuFeed(
+            @RequestParam("platform") String platform,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+
+        System.out.println("[FORENSIC] [MENU-PULL] RID: " + restaurantId + " | PLATFORM: " + platform);
+
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
+        }
+
+        try {
+            // 1. Get Platform Markup from Settings
+            Settings settings = commonDataService.getSettings(restaurantId);
+            double markupPercent = 0.0;
+            if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
+                try {
+                    Map<String, Object> rawMap = objectMapper.readValue(settings.getRawSettingsJson(), Map.class);
+                    Object markupsObj = rawMap.get("platformMarkups");
+                    if (markupsObj instanceof Map) {
+                        Map<String, Object> markups = (Map<String, Object>) markupsObj;
+                        Object m = markups.get(platform);
+                        if (m != null) {
+                            markupPercent = Double.parseDouble(String.valueOf(m));
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("[FORENSIC] Failed to read platform markup: " + e.getMessage());
+                }
+            }
+
+            // 2. Fetch all products
+            List<Product> products = productService.getAllProductsNoCache(restaurantId);
+            List<Map<String, Object>> responseList = new ArrayList<>();
+            String prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+
+            for (Product p : products) {
+                // Calculate Online ID (custom mapping or fallback)
+                String onlineId = null;
+                double onlinePrice = p.getPrice();
+                boolean hasCustomPrice = false;
+
+                if (p.getExternalMappings() != null) {
+                    try {
+                        Map<String, Object> mappings = objectMapper.readValue(p.getExternalMappings(), Map.class);
+                        Object pmObj = mappings.get(platform);
+                        if (pmObj instanceof Map) {
+                            Map<String, Object> pmMap = (Map<String, Object>) pmObj;
+                            if (pmMap.get("id") != null) {
+                                onlineId = String.valueOf(pmMap.get("id"));
+                            }
+                            if (pmMap.get("price") != null) {
+                                onlinePrice = Double.parseDouble(String.valueOf(pmMap.get("price")));
+                                hasCustomPrice = true;
+                            }
+                        } else if (pmObj != null) {
+                            onlineId = String.valueOf(pmObj);
+                        }
+                    } catch (Exception e) {}
+                }
+
+                if (onlineId == null) {
+                    onlineId = prefix + "_" + p.getName().replaceAll("\\s+", "").toLowerCase();
+                }
+
+                if (!hasCustomPrice && markupPercent > 0.0) {
+                    onlinePrice = p.getPrice() * (1 + markupPercent / 100.0);
+                }
+
+                // Determine stock availability
+                boolean inStock = true;
+                if ("out_of_stock".equalsIgnoreCase(p.getOnlineAvailability())) {
+                    inStock = false;
+                } else if (p.getStock() != null && p.getStock() <= 0) {
+                    inStock = false;
+                }
+
+                Map<String, Object> itemMap = new LinkedHashMap<>();
+                itemMap.put("id", onlineId);
+                itemMap.put("name", p.getName());
+                itemMap.put("price", onlinePrice);
+                itemMap.put("base_price", p.getPrice());
+                itemMap.put("category", p.getCategory());
+                itemMap.put("in_stock", inStock);
+                itemMap.put("image", p.getImage());
+                itemMap.put("tax_rate", p.getTax() != null ? p.getTax() : 5.0);
+                itemMap.put("hsn_code", p.getHsnCode() != null ? p.getHsnCode() : "9963");
+
+                responseList.add(itemMap);
+            }
+
+            return ResponseEntity.ok(responseList);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("status", "error", "message", e.getMessage()));
+        }
+    }
+
     /**
      * Unified Webhook for Zomato, Swiggy, etc. via Aggregator (UrbanPiper style)
      */
@@ -101,16 +206,42 @@ public class OnlineOrderController {
                 if (product != null) {
                     // Use mapped price if available, else standard price
                     double finalPrice = product.getPrice();
+                    boolean hasCustomPrice = false;
                     try {
-                        Map<String, Object> mappings = objectMapper.readValue(product.getExternalMappings(), Map.class);
-                        Object mp = mappings.get(platform);
-                        if (mp instanceof Map) {
-                            Object priceObj = ((Map) mp).get("price");
-                            if (priceObj != null) {
-                                finalPrice = Double.parseDouble(String.valueOf(priceObj));
+                        if (product.getExternalMappings() != null) {
+                            Map<String, Object> mappings = objectMapper.readValue(product.getExternalMappings(), Map.class);
+                            Object mp = mappings.get(platform);
+                            if (mp instanceof Map) {
+                                Object priceObj = ((Map) mp).get("price");
+                                if (priceObj != null) {
+                                    finalPrice = Double.parseDouble(String.valueOf(priceObj));
+                                    hasCustomPrice = true;
+                                }
                             }
                         }
                     } catch (Exception e) {
+                    }
+
+                    if (!hasCustomPrice) {
+                        try {
+                            Settings settings = commonDataService.getSettings(restaurantId);
+                            if (settings.getRawSettingsJson() != null && !settings.getRawSettingsJson().trim().isEmpty()) {
+                                Map<String, Object> rawMap = objectMapper.readValue(settings.getRawSettingsJson(), Map.class);
+                                Object markupsObj = rawMap.get("platformMarkups");
+                                if (markupsObj instanceof Map) {
+                                    Map<String, Object> markups = (Map<String, Object>) markupsObj;
+                                    Object m = markups.get(platform);
+                                    if (m != null) {
+                                        double markupPercent = Double.parseDouble(String.valueOf(m));
+                                        if (markupPercent > 0.0) {
+                                            finalPrice = product.getPrice() * (1 + markupPercent / 100.0);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[FORENSIC] Failed to read platform markup in webhook: " + e.getMessage());
+                        }
                     }
 
                     OrderItem localItem = new OrderItem();
@@ -195,6 +326,7 @@ public class OnlineOrderController {
 
     private Product findProductByMapping(String restaurantId, String platform, String externalId) {
         List<Product> allProducts = productService.getAllProductsNoCache(restaurantId);
+        // 1. Try explicit mapping first
         for (Product p : allProducts) {
             if (p.getExternalMappings() == null)
                 continue;
@@ -213,6 +345,15 @@ public class OnlineOrderController {
                     }
                 }
             } catch (Exception e) {
+            }
+        }
+        
+        // 2. Fallback to naming convention: [prefix]_[productname]
+        String prefix = platform.substring(0, Math.min(2, platform.length())).toLowerCase();
+        for (Product p : allProducts) {
+            String fallbackId = prefix + "_" + p.getName().replaceAll("\\s+", "").toLowerCase();
+            if (externalId.equalsIgnoreCase(fallbackId)) {
+                return p;
             }
         }
         return null;
