@@ -277,6 +277,7 @@ public class OnlineOrderController {
                     localItem.setItemId(UUID.randomUUID().toString());
                     localItem.setProductId(product.getId());
                     localItem.setName(product.getName());
+                    finalPrice = Math.round(finalPrice * 100.0) / 100.0;
                     localItem.setPrice(finalPrice);
                     localItem.setQty(qty);
 
@@ -286,13 +287,13 @@ public class OnlineOrderController {
 
                     // Default to 5% if unspecified (Standard for restaurants)
                     double taxRate = product.getTax() != null ? product.getTax() : 5.0;
-                    double itemTotal = finalPrice * qty;
-                    double taxAmount = (itemTotal * taxRate) / 100.0;
+                    double itemTotal = Math.round((finalPrice * qty) * 100.0) / 100.0;
+                    double taxAmount = Math.round(((itemTotal * taxRate) / 100.0) * 100.0) / 100.0;
 
                     localItem.setTaxRate(taxRate);
                     localItem.setTaxAmount(taxAmount);
-                    localItem.setCgstAmount(taxAmount / 2.0);
-                    localItem.setSgstAmount(taxAmount / 2.0);
+                    localItem.setCgstAmount(Math.round((taxAmount / 2.0) * 100.0) / 100.0);
+                    localItem.setSgstAmount(Math.round((taxAmount / 2.0) * 100.0) / 100.0);
                     localItem.setTaxableValue(itemTotal);
 
                     localItem.setOrder(posOrder);
@@ -302,14 +303,18 @@ public class OnlineOrderController {
             }
 
             posOrder.setItems(localItems);
-            posOrder.setSubtotal(subtotal);
+            double roundedSubtotal = Math.round(subtotal * 100.0) / 100.0;
+            posOrder.setSubtotal(roundedSubtotal);
 
             // Calculate total tax for the entire order
             double totalTax = localItems.stream().mapToDouble(i -> i.getTaxAmount()).sum();
-            posOrder.setTaxAmount(totalTax);
-            posOrder.setCgstAmount(totalTax / 2.0);
-            posOrder.setSgstAmount(totalTax / 2.0);
-            posOrder.setTotal(subtotal + totalTax);
+            double roundedTax = Math.round(totalTax * 100.0) / 100.0;
+            posOrder.setTaxAmount(roundedTax);
+            posOrder.setCgstAmount(Math.round((roundedTax / 2.0) * 100.0) / 100.0);
+            posOrder.setSgstAmount(Math.round((roundedTax / 2.0) * 100.0) / 100.0);
+            
+            double roundedTotal = Math.round((roundedSubtotal + roundedTax) * 100.0) / 100.0;
+            posOrder.setTotal(roundedTotal);
 
             // 4. Save & Notify
             Order saved = orderService.saveOrderDirectly(posOrder);
