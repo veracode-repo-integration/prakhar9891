@@ -71,7 +71,13 @@ public class OnlineOrderController {
                     Object markupsObj = rawMap.get("platformMarkups");
                     if (markupsObj instanceof Map) {
                         Map<String, Object> markups = (Map<String, Object>) markupsObj;
-                        Object m = markups.get(platform);
+                        Object m = null;
+                        for (Map.Entry<String, Object> entry : markups.entrySet()) {
+                            if (entry.getKey().equalsIgnoreCase(platform)) {
+                                m = entry.getValue();
+                                break;
+                            }
+                        }
                         if (m != null) {
                             markupPercent = Double.parseDouble(String.valueOf(m));
                         }
@@ -221,7 +227,13 @@ public class OnlineOrderController {
                     try {
                         if (product.getExternalMappings() != null) {
                             Map<String, Object> mappings = objectMapper.readValue(product.getExternalMappings(), Map.class);
-                            Object mp = mappings.get(platform);
+                            Object mp = null;
+                            for (Map.Entry<String, Object> entry : mappings.entrySet()) {
+                                if (entry.getKey().equalsIgnoreCase(platform)) {
+                                    mp = entry.getValue();
+                                    break;
+                                }
+                            }
                             if (mp instanceof Map) {
                                 Object priceObj = ((Map) mp).get("price");
                                 if (priceObj != null) {
@@ -241,7 +253,13 @@ public class OnlineOrderController {
                                 Object markupsObj = rawMap.get("platformMarkups");
                                 if (markupsObj instanceof Map) {
                                     Map<String, Object> markups = (Map<String, Object>) markupsObj;
-                                    Object m = markups.get(platform);
+                                    Object m = null;
+                                    for (Map.Entry<String, Object> entry : markups.entrySet()) {
+                                        if (entry.getKey().equalsIgnoreCase(platform)) {
+                                            m = entry.getValue();
+                                            break;
+                                        }
+                                    }
                                     if (m != null) {
                                         double markupPercent = Double.parseDouble(String.valueOf(m));
                                         if (markupPercent > 0.0) {
