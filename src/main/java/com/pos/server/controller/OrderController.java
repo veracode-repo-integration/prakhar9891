@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api")
@@ -138,6 +139,12 @@ public class OrderController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             Order updated = orderService.updateOrder(id, updates, rid);
             if (updated != null) {
+                // If it is a Ghar Tak order and status is ready, preparing, or cancelled, notify Ghar Tak
+                if (updated.getIsOnline() != null && updated.getIsOnline() && 
+                    "GHARTAK".equalsIgnoreCase(updated.getAggregatorName())) {
+                    notifyGharTakStatusUpdate(updated);
+                }
+
                 // Notify subscribers about updated order (Defensive)
                 org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder
                         .getContext().getAuthentication();
@@ -273,6 +280,39 @@ public class OrderController {
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
+    }
+
+    private void notifyGharTakStatusUpdate(Order order) {
+        new Thread(() -> {
+            try {
+                String webhookUrl = "https://api.ghartak.com/webhooks/order-status"; // Mock URL
+                
+                Map<String, Object> payload = new HashMap<>();
+                payload.put("orderId", order.getExternalId() != null ? order.getExternalId() : order.getId());
+                
+                String statusVal = order.getKitchenStatus();
+                if ("cancelled".equalsIgnoreCase(order.getStatus())) {
+                    statusVal = "cancelled";
+                }
+                payload.put("status", statusVal); // "preparing", "ready", or "cancelled"
+                
+                String jsonPayload = objectMapper.writeValueAsString(payload);
+                System.out.println("[GHARTAK-WEBHOOK] Outgoing Notification: URL=" + webhookUrl + " | Body=" + jsonPayload);
+                
+                java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                        .uri(java.net.URI.create(webhookUrl))
+                        .header("Content-Type", "application/json")
+                        .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonPayload))
+                        .timeout(java.time.Duration.ofSeconds(5))
+                        .build();
+                        
+                java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                System.out.println("[GHARTAK-WEBHOOK] Response code: " + response.statusCode() + " | Body: " + response.body());
+            } catch (Exception e) {
+                System.err.println("[GHARTAK-WEBHOOK] Failed to send status update: " + e.getMessage());
+            }
+        }).start();
     }
 
 }
