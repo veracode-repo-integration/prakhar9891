@@ -17,7 +17,8 @@ import org.hibernate.annotations.FetchMode;
         @Index(name = "idx_order_restaurant", columnList = "restaurant_id"),
         @Index(name = "idx_order_table", columnList = "table_id"),
         @Index(name = "idx_order_date", columnList = "created_at"),
-        @Index(name = "idx_order_status", columnList = "order_status")
+        @Index(name = "idx_order_status", columnList = "order_status"),
+        @Index(name = "idx_order_restaurant_date", columnList = "restaurant_id, created_at")
 })
 public class Order {
     @Id

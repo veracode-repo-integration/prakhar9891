@@ -9,7 +9,9 @@ import lombok.Data;
  */
 @Entity
 @Data
-@Table(name = "pos_customers")
+@Table(name = "pos_customers", indexes = {
+        @Index(name = "idx_cust_restaurant_mobile", columnList = "restaurant_id, mobile")
+})
 public class Customer {
     @Id
     private String id;

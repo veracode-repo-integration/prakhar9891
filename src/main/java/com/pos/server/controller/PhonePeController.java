@@ -16,6 +16,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/phonepe")
@@ -32,6 +33,12 @@ public class PhonePeController {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private com.pos.server.repository.OrderRepository orderRepository;
+
+    @Autowired
+    private com.pos.server.repository.PaymentDetailRepository paymentDetailRepository;
 
     /**
      * Prepare a PhonePe payment request.
@@ -56,13 +63,17 @@ public class PhonePeController {
                 return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "PhonePe is not configured for this restaurant."));
             }
 
-            String txId = (String) body.get("merchantTransactionId");
+            String clientTxId = (String) body.get("merchantTransactionId");
+            if (clientTxId == null || clientTxId.trim().isEmpty()) {
+                clientTxId = "TXN_" + System.currentTimeMillis();
+            }
+            String txId = restaurantId + "_" + clientTxId;
             double amount = Double.parseDouble(body.getOrDefault("amount", "0").toString());
             String mobile = (String) body.get("mobileNumber");
             String callbackUrl = (String) body.get("callbackUrl");
 
-            if (txId == null || amount <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Missing transaction ID or invalid amount."));
+            if (amount <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Invalid amount."));
             }
 
             long amountPaise = Math.round(amount * 100);
@@ -75,6 +86,8 @@ public class PhonePeController {
             response.put("checksum", checksum);
             response.put("merchantId", mId);
             response.put("baseUrl", phonePeService.getBaseUrl());
+            response.put("merchantTransactionId", clientTxId); // Return client-side ID so it matches client expectations
+            response.put("fullTransactionId", txId);
             
             return ResponseEntity.ok(response);
 
@@ -105,7 +118,8 @@ public class PhonePeController {
                 return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "PhonePe keys not found for this restaurant."));
             }
 
-            String endpoint = "/pg/v1/status/" + mId + "/" + merchantTransactionId;
+            String fullTxId = merchantTransactionId.contains("_") ? merchantTransactionId : restaurantId + "_" + merchantTransactionId;
+            String endpoint = "/pg/v1/status/" + mId + "/" + fullTxId;
             String xVerify = phonePeService.generateXVerify("", endpoint, saltKey, saltIndex);
 
             URL url = new URL(phonePeService.getBaseUrl() + endpoint);
@@ -139,11 +153,82 @@ public class PhonePeController {
      * Note: PhonePe sends Base64 encoded payload in the POST body.
      */
     @PostMapping("/callback")
-    public ResponseEntity<?> handleCallback(@RequestBody String base64Response) {
-        // In a real scenario, we would decode this, verify the checksum, 
-        // and update the order/table status in the database.
-        // For now, we acknowledge receipt.
-        System.out.println("[PhonePe] Received Callback: " + base64Response);
-        return ResponseEntity.ok("OK");
+    public ResponseEntity<?> handleCallback(
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-VERIFY", required = false) String xVerify) {
+        try {
+            System.out.println("[PhonePe] Received Webhook Callback: " + body);
+            String base64Response = body.get("response");
+            if (base64Response == null) {
+                return ResponseEntity.badRequest().body("Missing response body parameter");
+            }
+
+            // 1. Decode payload to extract transaction metadata (restaurant ID prefix)
+            String decodedJson = new String(java.util.Base64.getDecoder().decode(base64Response), java.nio.charset.StandardCharsets.UTF_8);
+            JsonNode decodedNode = objectMapper.readTree(decodedJson);
+            JsonNode dataNode = decodedNode.get("data");
+            
+            if (dataNode == null || !dataNode.has("merchantTransactionId")) {
+                return ResponseEntity.badRequest().body("Missing merchantTransactionId inside callback data");
+            }
+            
+            String fullTxId = dataNode.get("merchantTransactionId").asText();
+            String restaurantId = "";
+            String clientTxId = fullTxId;
+            
+            if (fullTxId.contains("_")) {
+                int underscoreIndex = fullTxId.indexOf("_");
+                restaurantId = fullTxId.substring(0, underscoreIndex);
+                clientTxId = fullTxId.substring(underscoreIndex + 1);
+            }
+
+            // 2. Fetch settings and keys for signature verification
+            Settings settings = commonDataService.getSettings(restaurantId);
+            JsonNode settingsJson = settings.getRawSettingsJson() != null ? objectMapper.readTree(settings.getRawSettingsJson()) : null;
+            String saltKey = settingsJson != null && settingsJson.has("phonepeSaltKey") ? settingsJson.get("phonepeSaltKey").asText() : null;
+            String saltIndex = settingsJson != null && settingsJson.has("phonepeSaltIndex") ? settingsJson.get("phonepeSaltIndex").asText() : "1";
+
+            if (saltKey == null) {
+                System.err.println("[PhonePe] Webhook REJECTED: Salt key not configured for restaurant: " + restaurantId);
+                return ResponseEntity.status(400).body("PhonePe credentials not configured for restaurant");
+            }
+
+            // 3. Verify callback checksum signature
+            boolean isVerified = phonePeService.verifyCallback(base64Response, xVerify, saltKey, saltIndex);
+            if (!isVerified) {
+                System.err.println("[PhonePe] Webhook REJECTED: Invalid checksum header for transaction: " + fullTxId);
+                return ResponseEntity.status(401).body("Invalid signature");
+            }
+
+            // 4. Update Database on Payment Success
+            boolean success = decodedNode.has("success") && decodedNode.get("success").asBoolean();
+            String code = decodedNode.has("code") ? decodedNode.get("code").asText() : "";
+            
+            if (success && "PAYMENT_SUCCESS".equalsIgnoreCase(code)) {
+                System.out.println("[PhonePe] Webhook Success verified for: " + fullTxId + ". Settling order in DB.");
+                
+                // Lookup payment detail records matching client reference or full reference
+                List<com.pos.server.model.PaymentDetail> details = paymentDetailRepository.findAllByReference(clientTxId);
+                if (details.isEmpty()) {
+                    details = paymentDetailRepository.findAllByReference(fullTxId);
+                }
+                
+                for (com.pos.server.model.PaymentDetail detail : details) {
+                    if (detail.getOrder() != null) {
+                        com.pos.server.model.Order order = detail.getOrder();
+                        order.setStatus("completed");
+                        orderRepository.save(order);
+                        System.out.println("[PhonePe] Webhook updated order ID: " + order.getId() + " status to completed.");
+                    }
+                }
+            } else {
+                System.out.println("[PhonePe] Webhook received non-success callback for: " + fullTxId + " Code: " + code);
+            }
+
+            return ResponseEntity.ok("OK");
+        } catch (Exception e) {
+            System.err.println("[PhonePe] Error handling webhook callback: " + e.getMessage());
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
     }
 }

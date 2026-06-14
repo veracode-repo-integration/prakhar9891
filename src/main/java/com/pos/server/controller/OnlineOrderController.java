@@ -208,9 +208,17 @@ public class OnlineOrderController {
             String externalId = (String) orderData.get("id");
             String platform = (String) orderData.get("platform"); // 'ZOMATO', 'SWIGGY'
 
+            String posOrderId = "ONL-" + externalId;
+
+            // Idempotency / Replay mitigation check
+            if (orderService.existsById(posOrderId)) {
+                System.out.println("[FORENSIC] [WEBHOOK-HIT] Online order " + posOrderId + " already exists. Skipping processing to prevent duplicate alerts.");
+                return ResponseEntity.ok(Map.of("status", "success", "message", "Order already processed", "pos_order_id", posOrderId));
+            }
+
             // 2. Initialize POS Order
             Order posOrder = new Order();
-            posOrder.setId("ONL-" + externalId);
+            posOrder.setId(posOrderId);
             posOrder.setExternalId(externalId);
             posOrder.setAggregatorName(platform);
             posOrder.setIsOnline(true);

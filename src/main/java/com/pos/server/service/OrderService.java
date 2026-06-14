@@ -48,6 +48,9 @@ public class OrderService {
     @Autowired
     private com.pos.server.service.SirenSchedulerService sirenSchedulerService;
 
+    @Autowired
+    private com.pos.server.repository.ShiftRepository shiftRepository;
+
     private final ObjectMapper mapper = new ObjectMapper();
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -325,6 +328,7 @@ public class OrderService {
             log.info("Credit transaction recorded for Pay Later order: {}", savedOrder.getId());
         }
 
+        updateShiftSales(savedOrder);
         return savedOrder;
     }
 
@@ -465,11 +469,45 @@ public class OrderService {
         if (order.getCreatedAt() == 0) {
             order.setCreatedAt(System.currentTimeMillis());
         }
-        return orderRepository.saveAndFlush(order);
+        Order saved = orderRepository.saveAndFlush(order);
+        updateShiftSales(saved);
+        return saved;
     }
 
     public Order getOrderByInvoiceNumber(String invoiceNumber) {
         log.info("Fetching public order by invoice number: {}", invoiceNumber);
         return orderRepository.findFirstByInvoiceNumberOrderByCreatedAtDesc(invoiceNumber).orElse(null);
+    }
+
+    public boolean existsById(String id) {
+        if (id == null || id.trim().isEmpty()) {
+            return false;
+        }
+        return orderRepository.existsById(id.trim());
+    }
+
+    public void updateShiftSales(Order order) {
+        if (order == null || order.getRestaurantId() == null) return;
+        try {
+            Optional<Shift> activeShiftOpt = shiftRepository.findFirstByRestaurantIdAndStatusIgnoreCase(order.getRestaurantId().toLowerCase().trim(), "OPEN");
+            if (activeShiftOpt.isPresent()) {
+                Shift shift = activeShiftOpt.get();
+                String payMethod = order.getMethod() != null ? order.getMethod().toUpperCase() : "CASH";
+                double totalAmt = order.getTotal();
+                
+                if (payMethod.contains("CASH")) {
+                    shift.setCashSales(shift.getCashSales() + totalAmt);
+                    shift.setExpectedCash(shift.getExpectedCash() + totalAmt);
+                } else if (payMethod.contains("UPI") || payMethod.contains("PHONEPE") || payMethod.contains("RAZORPAY")) {
+                    shift.setUpiSales(shift.getUpiSales() + totalAmt);
+                } else if (payMethod.contains("CARD")) {
+                    shift.setCardSales(shift.getCardSales() + totalAmt);
+                }
+                shiftRepository.save(shift);
+                log.info("[SHIFT] Accumulated sales for shift: {} with amount: {} via {}", shift.getId(), totalAmt, payMethod);
+            }
+        } catch (Exception e) {
+            log.error("[SHIFT] Failed to update shift sales: {}", e.getMessage());
+        }
     }
 }

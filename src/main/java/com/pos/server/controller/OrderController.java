@@ -103,8 +103,9 @@ public class OrderController {
             @RequestParam(defaultValue = "50") int size,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
+            int safeSize = Math.min(size, 100);
             String rid = authService.validateRestaurantAccess(restaurantId);
-            return ResponseEntity.ok(orderService.getOrdersPaged(rid, page, size));
+            return ResponseEntity.ok(orderService.getOrdersPaged(rid, page, safeSize));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage() != null ? e.getMessage() : "Unknown Error"));
         }

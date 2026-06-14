@@ -40,8 +40,11 @@ public class ProductController {
     }
 
     @PostMapping("/bulk")
-    public ResponseEntity<List<Product>> bulkSaveProducts(@RequestBody List<Product> products,
+    public ResponseEntity<?> bulkSaveProducts(@RequestBody List<Product> products,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        if (products == null || products.size() > 500) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Bulk payload size exceeds maximum limit of 500 products."));
+        }
         String rid = authService.validateRestaurantAccess(restaurantId);
         for (Product product : products) {
             product.setRestaurantId(rid);

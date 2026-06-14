@@ -64,4 +64,30 @@ public class PhonePeService {
         return Base64.getEncoder().encodeToString(payload.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Verify the X-VERIFY signature of a callback request.
+     */
+    public boolean verifyCallback(String base64Response, String xVerifyHeader, String saltKey, String saltIndex) {
+        try {
+            if (base64Response == null || xVerifyHeader == null || saltKey == null) {
+                return false;
+            }
+            String stringToHash = base64Response + saltKey;
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(stringToHash.getBytes(StandardCharsets.UTF_8));
+            
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            
+            String expected = hexString.toString() + "###" + (saltIndex != null ? saltIndex : "1");
+            return expected.equalsIgnoreCase(xVerifyHeader);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 }

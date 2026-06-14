@@ -19,3 +19,4 @@ temp_*.txt
 *.bat
 !run-backend.bat
 !start_backend_fix.bat
+service-account.json

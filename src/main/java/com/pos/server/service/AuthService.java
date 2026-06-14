@@ -404,4 +404,14 @@ public class AuthService {
     public void saveUser(User user) {
         userRepository.save(user);
     }
+
+    @Transactional
+    public void changePassword(String username, String currentPassword, String newPassword) {
+        User user = findByUsername(username);
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new RuntimeException("Current password does not match");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

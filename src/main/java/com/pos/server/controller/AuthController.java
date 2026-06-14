@@ -271,4 +271,36 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+
+    @Autowired
+    private com.pos.server.service.TokenBlacklistService tokenBlacklistService;
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            long expiry = jwtUtils.getExpirationTimeFromToken(token);
+            tokenBlacklistService.blacklistToken(token, expiry);
+        }
+        return ResponseEntity.ok(Map.of("ok", true, "message", "Logged out successfully"));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request) {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                    .getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+            }
+            String username = auth.getName();
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+            
+            authService.changePassword(username, currentPassword, newPassword);
+            return ResponseEntity.ok(Map.of("ok", true, "message", "Password changed successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
 }
