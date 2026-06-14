@@ -49,24 +49,34 @@ public class UserController {
         }
     }
 
-    // Update user role - ADMIN ONLY
     @PutMapping("/{id}/role")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateUserRole(@PathVariable String id, @RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> updateUserRole(
+            @PathVariable String id, 
+            @RequestBody Map<String, String> payload,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         String newRole = payload.get("role");
         if (newRole == null || (!newRole.equals("admin") && !newRole.equals("staff"))) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Invalid role"));
         }
 
         try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
             Long userId = Long.parseLong(id);
             return userRepository.findById(userId).map(user -> {
+                // Cross-tenant verification: Target user must belong to caller's restaurant
+                if (!rid.equalsIgnoreCase(user.getRestaurantId())) {
+                    return ResponseEntity.status(403).body(Map.of("ok", false, "message", "Access Denied: Target user does not belong to your restaurant"));
+                }
                 user.setRole(newRole);
                 userRepository.save(user);
                 return ResponseEntity.ok(Map.of("ok", true));
             }).orElse(ResponseEntity.notFound().build());
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Invalid ID format"));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
 }
+

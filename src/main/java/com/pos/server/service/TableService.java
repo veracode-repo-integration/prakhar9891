@@ -28,13 +28,20 @@ public class TableService {
         return tableRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
     }
 
-    public List<RestaurantTable> getTablesByArea(String area) {
-        return tableRepository.findByArea(area);
+    public List<RestaurantTable> getTablesByArea(String area, String restaurantId) {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return tableRepository.findByArea(area);
+        }
+        return tableRepository.findByAreaAndRestaurantIdIgnoreCase(area, restaurantId);
     }
 
-    public List<RestaurantTable> getTablesByStatus(String status) {
-        return tableRepository.findByStatus(status);
+    public List<RestaurantTable> getTablesByStatus(String status, String restaurantId) {
+        if (restaurantId == null || restaurantId.trim().isEmpty()) {
+            return tableRepository.findByStatus(status);
+        }
+        return tableRepository.findByStatusAndRestaurantIdIgnoreCase(status, restaurantId);
     }
+
 
     @Transactional
     public RestaurantTable createTable(RestaurantTable table) {
@@ -147,12 +154,17 @@ public class TableService {
     }
 
     @Transactional
-    public boolean deleteTable(String id) {
-        if (tableRepository.existsById(id)) {
-            tableRepository.deleteById(id);
-            log.info("Deleted table: {}", id);
-            return true;
+    public boolean deleteTable(String id, String restaurantId) {
+        Optional<RestaurantTable> tableOpt = tableRepository.findById(id);
+        if (tableOpt.isPresent()) {
+            RestaurantTable table = tableOpt.get();
+            if (restaurantId == null || restaurantId.trim().isEmpty() || table.getRestaurantId().equalsIgnoreCase(restaurantId)) {
+                tableRepository.delete(table);
+                log.info("Deleted table: {}", id);
+                return true;
+            }
         }
         return false;
     }
+
 }

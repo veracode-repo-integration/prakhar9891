@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
+import javax.servlet.http.HttpServletRequest;
+import com.pos.server.security.JwtUtils;
 
 @Service
 public class AuthService {
@@ -31,6 +33,13 @@ public class AuthService {
 
     @Autowired
     private com.pos.server.security.FirebaseService firebaseService;
+
+    @Autowired
+    private HttpServletRequest httpServletRequest;
+
+    @Autowired
+    private JwtUtils jwtUtils;
+
 
     @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9891260801}")
     private String superAdminPhones;
@@ -69,23 +78,6 @@ public class AuthService {
     }
 
     public User login(String identifier, String providedPassword) {
-        // Hardcoded Super Admin Bypass (Username/Password)
-        if ("superadmin".equals(identifier) && "superadmin@941219".equals(providedPassword)) {
-            System.out.println("[AuthService] Super Admin Password Bypass triggered for: " + identifier);
-            User sa = userRepository.findByUsername("superadmin").orElseGet(() -> {
-                User newUser = new User();
-                newUser.setUsername("superadmin");
-                newUser.setPasswordHash(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
-                newUser.setRole("ADMIN");
-                newUser.setFirstName("Super");
-                newUser.setLastName("Admin");
-                newUser.setContact("9891260801");
-                return userRepository.save(newUser);
-            });
-            sa.setRole("SUPER_ADMIN");
-            return sa;
-        }
-
         Optional<User> userOpt = userRepository.findByUsername(identifier);
         if (userOpt.isEmpty())
             userOpt = userRepository.findByEmail(identifier);
@@ -107,11 +99,15 @@ public class AuthService {
     public void deleteUser(String username) {
         User user = findByUsername(username);
         // Robust Deletion: Instead of physical delete which breaks foreign keys (orders, etc.)
-        // We de-identify the user to "free up" the username and contact
+        // We anonymize the user to "free up" the username/contact and scrub all PII details.
         String timestamp = String.valueOf(System.currentTimeMillis());
         user.setUsername("deleted_" + user.getUsername() + "_" + timestamp);
         user.setContact("deleted_" + timestamp);
         user.setEmail(null);
+        user.setFirstName("Deleted");
+        user.setLastName("User");
+        user.setDeviceToken(null);
+        user.setPasswordHash("DELETED_" + java.util.UUID.randomUUID().toString());
         userRepository.save(user);
     }
 
@@ -135,11 +131,8 @@ public class AuthService {
     public User loginByPhone(String idToken, String restaurantId, String providedName) {
         String phone;
         try {
-            // 1. Mandatory Backend Verification (with Super Admin Bypass)
-            if ("super-admin-bypass".equals(idToken)) {
-                phone = "+919891260801";
-                System.out.println("[AuthService] Super Admin Bypass used for: " + phone);
-            } else if ("guest-otp-bypass".equals(idToken)) {
+            // 1. Mandatory Backend Verification (with Guest OTP Bypass)
+            if ("guest-otp-bypass".equals(idToken)) {
                 // SPECIAL BYPASS FOR DINE-IN (UPI-FIRST FLOW)
                 // In this case, 'providedName' is used as the phone number passed from controller
                 phone = providedName;
@@ -314,7 +307,7 @@ public class AuthService {
         String userRid = user.getRestaurantId() != null ? user.getRestaurantId().toLowerCase() : null;
         String compareHeader = headerId != null ? headerId.toLowerCase() : null;
         
-        if (compareHeader != null && !compareHeader.equals(userRid) && !"GUEST".equalsIgnoreCase(user.getRole())) {
+        if (compareHeader != null && !compareHeader.equals(userRid)) {
             // Also allow prefix/suffix matches: header "divya" should match stored ID "divya-1234"
             // This handles the case where QR codes/URLs use the short slug but the DB stores the full ID.
             boolean isPrefix = (userRid != null && (userRid.startsWith(compareHeader) || compareHeader.startsWith(userRid)));
@@ -325,6 +318,24 @@ public class AuthService {
 
         return userRid != null ? userRid : compareHeader;
     }
+
+    public void validateTableAccess(String targetTableId) {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new RuntimeException("Unauthorized: Session not found");
+        }
+
+        String authHeader = httpServletRequest.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            String tokenTableId = jwtUtils.getTableIdFromToken(token);
+            if (tokenTableId != null && targetTableId != null && !tokenTableId.trim().equalsIgnoreCase(targetTableId.trim())) {
+                throw new RuntimeException("Access Denied: You do not have access to this table's session.");
+            }
+        }
+    }
+
 
     @Transactional
     public Map<String, Object> submitOnboarding(User user, Map<String, String> data) {

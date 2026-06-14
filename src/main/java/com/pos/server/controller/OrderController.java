@@ -37,6 +37,10 @@ public class OrderController {
     @Autowired
     private com.pos.server.service.CommonDataService commonDataService;
 
+    @org.springframework.beans.factory.annotation.Value("${pos.integration.ghartak.secret:GHARTAK_SECURE_WEBHOOK_KEY_2026}")
+    private String ghartakSecret;
+
+
 
     @GetMapping("/v2/pos-orders/test-push")
     public ResponseEntity<String> testPush(@RequestParam String restaurantId) {
@@ -113,6 +117,11 @@ public class OrderController {
             String rid = authService.validateRestaurantAccess(restaurantId);
             request.setRestaurantId(rid);
 
+            // Enforce table containment for guests during checkout
+            if (request.getTableId() != null && !request.getTableId().trim().isEmpty()) {
+                authService.validateTableAccess(request.getTableId());
+            }
+
             Order saved = orderService.processCheckout(request);
             // Notify subscribers about new order with acting user context (Defensive)
             org.springframework.security.core.Authentication authInfo = org.springframework.security.core.context.SecurityContextHolder
@@ -131,6 +140,7 @@ public class OrderController {
                     .body(Map.of("ok", false, "message", "Error processing checkout: " + e.getMessage()));
         }
     }
+
 
     @PutMapping("/pos-orders/{id}")
     public ResponseEntity<?> updateOrder(@PathVariable String id, @RequestBody Order updates,
@@ -300,9 +310,13 @@ public class OrderController {
                 System.out.println("[GHARTAK-WEBHOOK] Outgoing Notification: URL=" + webhookUrl + " | Body=" + jsonPayload);
                 
                 java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
-                java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                java.net.http.HttpRequest.Builder builder = java.net.http.HttpRequest.newBuilder()
                         .uri(java.net.URI.create(webhookUrl))
-                        .header("Content-Type", "application/json")
+                        .header("Content-Type", "application/json");
+                if (ghartakSecret != null) {
+                    builder.header("X-Integration-API-Key", ghartakSecret);
+                }
+                java.net.http.HttpRequest request = builder
                         .POST(java.net.http.HttpRequest.BodyPublishers.ofString(jsonPayload))
                         .timeout(java.time.Duration.ofSeconds(5))
                         .build();
@@ -313,6 +327,7 @@ public class OrderController {
                 System.err.println("[GHARTAK-WEBHOOK] Failed to send status update: " + e.getMessage());
             }
         }).start();
+
     }
 
 }

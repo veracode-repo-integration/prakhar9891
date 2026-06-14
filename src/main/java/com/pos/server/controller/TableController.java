@@ -44,13 +44,27 @@ public class TableController {
     }
 
     @GetMapping("/tables/area/{area}")
-    public ResponseEntity<List<RestaurantTable>> getTablesByArea(@PathVariable String area) {
-        return ResponseEntity.ok(tableService.getTablesByArea(area));
+    public ResponseEntity<?> getTablesByArea(
+            @PathVariable String area,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(tableService.getTablesByArea(area, rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
 
     @GetMapping("/tables/status/{status}")
-    public ResponseEntity<List<RestaurantTable>> getTablesByStatus(@PathVariable String status) {
-        return ResponseEntity.ok(tableService.getTablesByStatus(status));
+    public ResponseEntity<?> getTablesByStatus(
+            @PathVariable String status,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(tableService.getTablesByStatus(status, rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
 
     @PostMapping("/tables")
@@ -71,6 +85,7 @@ public class TableController {
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
+            authService.validateTableAccess(id); // Enforce table containment for guests
             return tableService.updateTable(id, updates, rid)
                     .map(table -> {
                         // Notify subscribers about table update (trigger sound alert)
@@ -96,6 +111,7 @@ public class TableController {
             @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
         try {
             String rid = authService.validateRestaurantAccess(restaurantId);
+            authService.validateTableAccess(id); // Enforce table containment for guests
             String status = (String) statusUpdate.get("status");
             if (status == null) {
                 return ResponseEntity.badRequest().body(Map.of("ok", false, "message", "Status is required"));
@@ -121,10 +137,18 @@ public class TableController {
     }
 
     @DeleteMapping("/tables/{id}")
-    public ResponseEntity<?> deleteTable(@PathVariable String id) {
-        if (tableService.deleteTable(id)) {
-            return ResponseEntity.ok(Map.of("ok", true, "message", "Table deleted successfully"));
+    public ResponseEntity<?> deleteTable(
+            @PathVariable String id,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            if (tableService.deleteTable(id, rid)) {
+                return ResponseEntity.ok(Map.of("ok", true, "message", "Table deleted successfully"));
+            }
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
-        return ResponseEntity.notFound().build();
     }
+
 }

@@ -47,19 +47,30 @@ public class OnlineOrderController {
     @Autowired
     private com.pos.server.service.CommonDataService commonDataService;
 
+    @org.springframework.beans.factory.annotation.Value("${pos.integration.ghartak.secret:GHARTAK_SECURE_WEBHOOK_KEY_2026}")
+    private String ghartakSecret;
+
+
     /**
      * Pull menu API for online aggregators (e.g. Ghar Tak)
      */
     @GetMapping("/menu")
     public ResponseEntity<?> getMenuFeed(
             @RequestParam("platform") String platform,
-            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId,
+            @RequestHeader(value = "X-Integration-API-Key", required = false) String apiKey) {
+
+        if (ghartakSecret != null && !ghartakSecret.equals(apiKey)) {
+            System.err.println("[FORENSIC] [MENU-PULL] [REJECTED] Invalid API Key: " + apiKey);
+            return ResponseEntity.status(401).body("Unauthorized: Invalid API Key");
+        }
 
         System.out.println("[FORENSIC] [MENU-PULL] RID: " + restaurantId + " | PLATFORM: " + platform);
 
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
         }
+
 
         try {
             // 1. Get Platform Markup from Settings
@@ -171,7 +182,13 @@ public class OnlineOrderController {
     @PostMapping("/orders")
     public ResponseEntity<?> receiveOnlineOrder(
             @RequestBody Map<String, Object> payload,
-            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId,
+            @RequestHeader(value = "X-Integration-API-Key", required = false) String apiKey) {
+
+        if (ghartakSecret != null && !ghartakSecret.equals(apiKey)) {
+            System.err.println("[FORENSIC] [WEBHOOK-HIT] [REJECTED] Invalid API Key: " + apiKey);
+            return ResponseEntity.status(401).body(Map.of("status", "error", "message", "Unauthorized: Invalid API Key"));
+        }
 
         System.out.println("[FORENSIC] [WEBHOOK-HIT] RID_HEADER: " + restaurantId + " | PAYLOAD: "
                 + (payload != null ? "YES" : "NO"));
@@ -180,6 +197,7 @@ public class OnlineOrderController {
             System.err.println("[FORENSIC] [WEBHOOK-ERR] REJECTED: X-Restaurant-Id header is MISSING!");
             return ResponseEntity.badRequest().body("X-Restaurant-Id header is required");
         }
+
 
         try {
             // 1. Extract Basic Info

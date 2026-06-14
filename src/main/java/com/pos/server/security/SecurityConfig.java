@@ -42,9 +42,10 @@ public class SecurityConfig {
                         "/api/dine-in/scan",
                         "/api/settings",
                         "/api/webhooks/**",
-                        "/api/v2/pos-orders/**",
+                        "/api/v2/pos-orders/public/**",
                         "/api/razorpay/**",
                         "/ws-pos/**")
+
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health").permitAll()
@@ -89,7 +90,10 @@ public class SecurityConfig {
         } else {
             // In production, NEVER use setAllowedOriginPatterns("*")
             // Set this to your frontend URL in application.properties
-            configuration.setAllowedOriginPatterns(java.util.Collections.singletonList("*"));
+            System.err.println("[SECURITY WARNING] No app.allowed.origins specified! Falling back to localhost origins.");
+            configuration.setAllowedOriginPatterns(java.util.Arrays.asList(
+                "http://localhost:3000", "http://localhost:8080", "http://localhost:8081"
+            ));
         }
 
         configuration

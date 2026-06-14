@@ -13,11 +13,14 @@ import java.util.Optional;
 @Repository
 public interface RestaurantTableRepository extends JpaRepository<RestaurantTable, String> {
     List<RestaurantTable> findByArea(String area);
+    List<RestaurantTable> findByAreaAndRestaurantIdIgnoreCase(String area, String restaurantId);
 
     List<RestaurantTable> findByStatus(String status);
+    List<RestaurantTable> findByStatusAndRestaurantIdIgnoreCase(String status, String restaurantId);
 
     List<RestaurantTable> findAllByRestaurantId(String restaurantId);
     List<RestaurantTable> findAllByRestaurantIdIgnoreCase(String restaurantId);
+
 
     Optional<RestaurantTable> findByIdAndRestaurantId(String id, String restaurantId);
     Optional<RestaurantTable> findByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);

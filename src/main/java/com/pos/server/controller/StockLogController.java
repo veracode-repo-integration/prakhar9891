@@ -58,12 +58,18 @@ public class StockLogController {
 
     /**
      * Get stock logs by type
-     * GET /api/stock-logs/type/{type}
-     */
     @GetMapping("/stock-logs/type/{type}")
-    public ResponseEntity<List<StockLog>> getStockLogsByType(@PathVariable String type) {
-        return ResponseEntity.ok(stockLogRepository.findByType(type));
+    public ResponseEntity<List<StockLog>> getStockLogsByType(
+            @PathVariable String type,
+            @RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        try {
+            String rid = authService.validateRestaurantAccess(restaurantId);
+            return ResponseEntity.ok(stockLogRepository.findByTypeAndRestaurantId(type, rid));
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(new java.util.ArrayList<>());
+        }
     }
+
 
     /**
      * Create stock log

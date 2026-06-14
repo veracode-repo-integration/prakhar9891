@@ -28,15 +28,27 @@ public class JwtUtils {
     }
 
     public String generateToken(String username, String role, String restaurantId) {
-        return Jwts.builder()
+        return generateToken(username, role, restaurantId, null);
+    }
+
+    public String generateToken(String username, String role, String restaurantId, String tableId) {
+        long currentExpiration = expirationMs;
+        if ("GUEST".equalsIgnoreCase(role)) {
+            currentExpiration = 10800000; // 3 hours (3 * 60 * 60 * 1000)
+        }
+        JwtBuilder builder = Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
-                .claim("restaurantId", restaurantId)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .claim("restaurantId", restaurantId);
+        if (tableId != null) {
+            builder.claim("tableId", tableId);
+        }
+        return builder.setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + currentExpiration))
                 .signWith(getSigningKey())
                 .compact();
     }
+
 
     public String getUsernameFromToken(String token) {
         return Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
@@ -62,6 +74,17 @@ public class JwtUtils {
             return null;
         }
     }
+
+    public String getTableIdFromToken(String token) {
+        try {
+            Object tid = Jwts.parserBuilder().setSigningKey(getSigningKey()).build()
+                    .parseClaimsJws(token).getBody().get("tableId");
+            return tid != null ? tid.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
 
     public boolean validateToken(String token) {
         try {

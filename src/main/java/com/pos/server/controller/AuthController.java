@@ -141,6 +141,7 @@ public class AuthController {
             String phone = request.get("phone");
             String restaurantId = request.get("restaurantId");
             String name = request.get("name");
+            String tableId = request.get("tableId");
             
             // For UPI-First Dine-In, we skip Firebase OTP
             User user = authService.loginByPhone("guest-otp-bypass", restaurantId, phone);
@@ -150,7 +151,7 @@ public class AuthController {
                 authService.saveUser(user);
             }
             
-            String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId());
+            String token = jwtUtils.generateToken(user.getUsername(), user.getRole(), user.getRestaurantId(), tableId);
 
             Map<String, Object> response = new HashMap<>();
             response.put("ok", true);
@@ -161,6 +162,7 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("ok", false, "message", e.getMessage()));
         }
     }
+
 
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile() {
