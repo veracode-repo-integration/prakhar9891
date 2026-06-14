@@ -166,6 +166,13 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = assignSuperAdminIfApplicable(userOpt.get(), cleanPhone);
+            
+            // If the user is a GUEST and scanning a new restaurant, update their restaurantId
+            if ("GUEST".equalsIgnoreCase(user.getRole()) && restaurantId != null && !restaurantId.trim().isEmpty()) {
+                user.setRestaurantId(restaurantId.toLowerCase().trim());
+                userRepository.save(user);
+            }
+
             // BYPASS subscription check for Dine-In sessions
             if (restaurantId == null || restaurantId.trim().isEmpty() || "guest-otp-bypass".equals(idToken)) {
                 if ("GUEST".equalsIgnoreCase(user.getRole()) && !"guest-otp-bypass".equals(idToken)) {
