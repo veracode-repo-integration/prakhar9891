@@ -60,7 +60,7 @@ public class SecurityConfig {
         // Fix for H2 console frame options
         http.headers().frameOptions().disable();
 
-        http.addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class);
+        http.addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
