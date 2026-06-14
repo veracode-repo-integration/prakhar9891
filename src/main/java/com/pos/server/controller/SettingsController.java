@@ -3,6 +3,7 @@ package com.pos.server.controller;
 import com.pos.server.model.Settings;
 import com.pos.server.model.User;
 import com.pos.server.repository.SettingsRepository;
+import com.pos.server.repository.RestaurantRepository;
 import com.pos.server.service.AuthService;
 import com.pos.server.service.CommonDataService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +22,9 @@ public class SettingsController {
 
     @Autowired
     private SettingsRepository settingsRepository;
+
+    @Autowired
+    private RestaurantRepository restaurantRepository;
 
     @Autowired
     private AuthService authService;
@@ -131,6 +135,16 @@ public class SettingsController {
 
             settings.setRawSettingsJson(objectMapper.writeValueAsString(settingsNode));
             settingsRepository.save(settings);
+
+            // Update restaurant timestamp to notify mobile clients of updated settings
+            try {
+                restaurantRepository.findById(restaurantId).ifPresent(r -> {
+                    r.setUpdatedAt(System.currentTimeMillis() / 1000);
+                    restaurantRepository.save(r);
+                });
+            } catch (Exception ex) {
+                System.err.println("[SettingsController] Failed to update restaurant sync timestamp: " + ex.getMessage());
+            }
 
             return ResponseEntity.ok(Map.of("ok", true, "message", "Settings saved successfully"));
         } catch (Exception e) {
