@@ -44,6 +44,9 @@ public class Product {
     @Column(name = "restaurant_id")
     private String restaurantId;
 
+    @Column(name = "combo_options", columnDefinition = "TEXT")
+    private String comboOptions;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
@@ -54,3 +57,4 @@ public class Product {
     @Column(name = "online_availability")
     private String onlineAvailability = "available"; // 'available' or 'out_of_stock'
 }
+

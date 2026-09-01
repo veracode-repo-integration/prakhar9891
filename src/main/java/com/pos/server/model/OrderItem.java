@@ -47,6 +47,12 @@ public class OrderItem {
     @Column(name = "hsn_code")
     private String hsnCode = "9963";
 
+    @Column(name = "parent_item_id")
+    private String parentItemId;
+
+    @Column(name = "is_combo_item")
+    private Boolean isComboItem = false;
+
     @Column(name = "tax_category")
     private String taxCategory;
 
@@ -87,3 +93,4 @@ public class OrderItem {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Order order;
 }
+
