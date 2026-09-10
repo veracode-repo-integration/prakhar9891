@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, String> {
     List<Product> findAllByRestaurantId(String restaurantId);
     List<Product> findAllByRestaurantIdIgnoreCase(String restaurantId);
+    List<Product> findAllByRestaurantIdIgnoreCaseOrderByCategoryAscNameAsc(String restaurantId);
 
     Optional<Product> findByIdAndRestaurantId(String id, String restaurantId);
     Optional<Product> findByIdAndRestaurantIdIgnoreCase(String id, String restaurantId);

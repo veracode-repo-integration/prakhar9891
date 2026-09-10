@@ -21,7 +21,7 @@ public class ProductService {
         if (restaurantId == null || restaurantId.trim().isEmpty()) {
             return new java.util.ArrayList<>();
         }
-        List<Product> products = productRepository.findAllByRestaurantIdIgnoreCase(restaurantId);
+        List<Product> products = productRepository.findAllByRestaurantIdIgnoreCaseOrderByCategoryAscNameAsc(restaurantId);
         products.forEach(p -> {
             if (p.getImage() != null && p.getImage().contains("unsplash.com")) {
                 p.setImage("");
@@ -31,7 +31,7 @@ public class ProductService {
     }
 
     public List<Product> getAllProductsNoCache(String restaurantId) {
-        List<Product> products = productRepository.findAllByRestaurantIdIgnoreCase(restaurantId.toLowerCase().trim());
+        List<Product> products = productRepository.findAllByRestaurantIdIgnoreCaseOrderByCategoryAscNameAsc(restaurantId.toLowerCase().trim());
         products.forEach(p -> {
             if (p.getImage() != null && p.getImage().contains("unsplash.com")) {
                 p.setImage("");
