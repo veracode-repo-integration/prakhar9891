@@ -105,9 +105,15 @@ public class AuthController {
             response.put("token", token);
             response.put("user", createUserResponse(user));
             return ResponseEntity.ok(response);
+        } catch (org.springframework.dao.DataAccessException | org.hibernate.HibernateException e) {
+            System.err.println("[Auth] Database error during login: " + e.getMessage());
+            return ResponseEntity.status(503).body(Map.of("ok", false, "message", "Database connection error. Please verify database instance status."));
         } catch (Exception e) {
             if (e.getMessage() != null && e.getMessage().contains("suspended")) {
                 return ResponseEntity.status(403).body(Map.of("ok", false, "message", "Account is suspended"));
+            }
+            if (e.getMessage() != null && (e.getMessage().contains("JDBC") || e.getMessage().contains("Connection") || e.getMessage().contains("Hikari"))) {
+                return ResponseEntity.status(503).body(Map.of("ok", false, "message", "Database connection error. Please verify database instance status."));
             }
             return ResponseEntity.status(401).body(Map.of("ok", false, "message", "Invalid credentials"));
         }
