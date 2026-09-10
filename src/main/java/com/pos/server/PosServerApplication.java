@@ -17,4 +17,16 @@ public class PosServerApplication {
 		SpringApplication.run(PosServerApplication.class, args);
 		System.out.println(">>> SPRING CONTEXT STARTED SUCCESSFULLY.");
 	}
+
+	@Bean
+	public org.springframework.boot.CommandLineRunner clearExistingProductImages(com.pos.server.repository.ProductRepository productRepository) {
+		return args -> {
+			try {
+				int cleared = productRepository.clearAllProductImagesInDb();
+				System.out.println(">>> Successfully cleared " + cleared + " existing product images from the database.");
+			} catch (Exception e) {
+				System.err.println(">>> Note on clearing images at startup: " + e.getMessage());
+			}
+		};
+	}
 }

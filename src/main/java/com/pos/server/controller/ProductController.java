@@ -98,4 +98,11 @@ public class ProductController {
         return ResponseEntity.status(404).body(Map.of("ok", false, "message", "Product not found"));
     }
 
+    @DeleteMapping("/clear-images")
+    public ResponseEntity<?> clearAllProductImages(@RequestHeader(value = "X-Restaurant-Id", required = false) String restaurantId) {
+        String rid = authService.validateRestaurantAccess(restaurantId);
+        int cleared = productService.clearAllProductImages(rid);
+        return ResponseEntity.ok(Map.of("ok", true, "clearedCount", cleared));
+    }
+
 }
