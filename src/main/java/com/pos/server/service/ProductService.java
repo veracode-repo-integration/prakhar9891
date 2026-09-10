@@ -55,6 +55,7 @@ public class ProductService {
             System.err.println("GCS Upload failed for product: " + e.getMessage());
         }
 
+        product.setUpdatedAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
         return productRepository.save(product);
     }
 
@@ -63,6 +64,7 @@ public class ProductService {
             if (product.getId() == null || product.getId().isEmpty()) {
                 product.setId("prod-" + UUID.randomUUID().toString());
             }
+            product.setUpdatedAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
         }
         return productRepository.saveAll(products);
     }
@@ -142,6 +144,13 @@ public class ProductService {
                         product.setOnlineAvailability(updates.getOnlineAvailability());
                     if (updates.getExternalMappings() != null)
                         product.setExternalMappings(updates.getExternalMappings());
+                    if (updates.getSellingUnits() != null)
+                        product.setSellingUnits(updates.getSellingUnits());
+                    if (updates.getBaseUnit() != null)
+                        product.setBaseUnit(updates.getBaseUnit());
+                    if (updates.getDisplayUnit() != null)
+                        product.setDisplayUnit(updates.getDisplayUnit());
+                    product.setUpdatedAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC));
 
                     return productRepository.save(product);
                 })
