@@ -28,6 +28,9 @@ public class SuperAdminController {
     @Autowired
     private com.pos.server.repository.UserRepository userRepository;
 
+    @Autowired
+    private com.pos.server.repository.OrderRepository orderRepository;
+
     @org.springframework.beans.factory.annotation.Value("${superadmin.phones:9876543210,9891260801}")
     private String superAdminPhones;
 
@@ -324,6 +327,17 @@ public class SuperAdminController {
                     .filter(u -> !"GUEST".equalsIgnoreCase(u.getRole()) && !u.getUsername().startsWith("deleted_"))
                     .collect(java.util.stream.Collectors.toList());
             return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/restaurants/{id}/orders")
+    public ResponseEntity<?> getOrdersOfRestaurant(@PathVariable String id) {
+        try {
+            validateSuperAdmin();
+            List<com.pos.server.model.Order> orders = orderRepository.findAllByRestaurantId(id);
+            return ResponseEntity.ok(orders);
         } catch (Exception e) {
             return ResponseEntity.status(403).body(Map.of("ok", false, "message", e.getMessage()));
         }
