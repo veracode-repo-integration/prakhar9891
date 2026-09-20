@@ -85,6 +85,7 @@ public class SettingsController {
     }
 
     @PutMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<?> updateSettings(
             @RequestBody ObjectNode settingsNode,
             @RequestHeader(value = "X-Restaurant-Id", required = false) String headerId) {

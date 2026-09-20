@@ -43,12 +43,10 @@ public class SecurityConfig {
                 .antMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .antMatchers("/api/auth/login", "/api/auth/register", "/api/auth/otp-login", "/api/auth/guest-login", "/api/auth/check-user",
                         "/api/dine-in/scan",
-                        "/api/settings",
                         "/api/webhooks/**",
                         "/api/v2/pos-orders/public/**",
                         "/api/razorpay/**",
                         "/ws-pos/**")
-
                 .permitAll()
                 .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .antMatchers("/actuator/health").permitAll()
