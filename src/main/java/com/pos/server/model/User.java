@@ -5,7 +5,10 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "pos_users")
+@Table(name = "pos_users", indexes = {
+        @Index(name = "idx_user_restaurant", columnList = "restaurant_id")
+})
+@org.hibernate.annotations.BatchSize(size = 50)
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -6,7 +6,10 @@ import java.util.List;
 
 @Entity
 @Data
-@Table(name = "pos_order_items")
+@Table(name = "pos_order_items", indexes = {
+        @Index(name = "idx_order_item_order", columnList = "order_id")
+})
+@org.hibernate.annotations.BatchSize(size = 50)
 public class OrderItem {
     @Id
     @Column(name = "item_id")

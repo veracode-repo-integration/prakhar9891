@@ -12,6 +12,7 @@ import lombok.Data;
 @Table(name = "pos_customers", indexes = {
         @Index(name = "idx_cust_restaurant_mobile", columnList = "restaurant_id, mobile")
 })
+@org.hibernate.annotations.BatchSize(size = 50)
 public class Customer {
     @Id
     private String id;
