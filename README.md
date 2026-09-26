@@ -5,6 +5,7 @@ This backend is built using **Spring Boot 2.7.x** (Java 11) and follows a **Thre
 ## Base URL
 `http://localhost:4000/api`
 
+
 ## Security Protocols (Zero Trust)
 -   **Authentication**: All endpoints (except Auth) require a valid JWT Token.
 -   **Header**: `Authorization: Bearer <your_jwt_token>`
@@ -12,6 +13,7 @@ This backend is built using **Spring Boot 2.7.x** (Java 11) and follows a **Thre
 -   **Security Headers**: X-Frame-Options (DENY), X-XSS-Protection (Enabled).
 
 ---
+
 
 ## 1. Authentication
 
